@@ -1,6 +1,6 @@
 # Mica WebP Optimizer — Product Requirements
 
-Status: implemented — 3.3.1 MVP released
+Status: implemented — 3.4.2 live-catalog release
 
 ## Product promise
 
@@ -46,15 +46,19 @@ Mica reduces image size inside an Obsidian vault while preserving embeds, visual
 22. Maintain a conversion log with source, output, size before/after, quality mode, and result.
 23. Create recoverable backups or an undo journal before link rewrites or original-file moves.
 24. Provide rollback for the most recent batch when source files remain available.
+25. Allow three free successful conversions per local calendar day, then consume one purchased conversion only for each successfully written and verified WebP.
+26. Keep scans, previews, skips, failed conversions, and rollback free; never charge before the safe verified-write boundary.
+27. Use the unsigned browser-relay billing pattern with a stable per-install identity, serialized local billing operations, server-enforced available balance, and synchronized purchased balance.
+28. Reject placeholder or malformed Paddle price identifiers without opening checkout; ship only provisioned Mica catalog identifiers.
 
 ## Quality and performance
 
-25. Verify that each generated WebP can be decoded before it replaces or becomes the preferred reference.
-26. Preserve image orientation and alpha behavior correctly.
-27. Avoid freezing the Obsidian interface during large batches.
-28. Provide a configurable concurrency limit and pause/resume controls if needed for large vaults.
-29. Report when a conversion makes the file larger and offer to keep the original instead.
-30. Never alter note text unrelated to the changed media reference.
+29. Verify that each generated WebP can be decoded before it replaces or becomes the preferred reference.
+30. Preserve image orientation and alpha behavior correctly.
+31. Avoid freezing the Obsidian interface during large batches.
+32. Provide a configurable concurrency limit and pause/resume controls if needed for large vaults.
+33. Report when a conversion makes the file larger and offer to keep the original instead.
+34. Never alter note text unrelated to the changed media reference.
 
 ## AI decision
 
@@ -81,7 +85,7 @@ AI is not needed. Image conversion, quality checks, link discovery, and safe rep
 
 - A pasted PNG or JPEG can be converted in the background without blocking ordinary note editing.
 - All supported embeds and links continue to open after conversion.
-- A failed or interrupted operation leaves the original usable.
+- A failed or interrupted operation leaves the original usable and does not consume a conversion allowance.
 - Bulk runs provide clear preview, progress, skip reasons, and recovery data.
-- The user can choose quality and original-file handling without navigating complex settings.
-- The complete MVP works offline with no AI account and no paid credits.
+- The user can choose quality, original-file handling, and optional billing without navigating complex settings.
+- Core local conversion works offline with no AI account; paid conversion balance is optional and requires billing connectivity only for checkout/synchronization.

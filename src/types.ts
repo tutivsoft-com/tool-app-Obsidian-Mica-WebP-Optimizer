@@ -3,6 +3,11 @@ export type MetadataPolicy = "strip" | "keep";
 export type OriginalHandling = "keep" | "backup" | "review";
 
 export interface MicaSettings {
+  constanceDeviceId: string;
+  billingEmail: string;
+  freeConversionsRemaining: number;
+  freeAllowanceDate: string;
+  purchasedConversions: number;
   watchedFolders: string[];
   outputFolder: string;
   quality: number;

@@ -1,6 +1,12 @@
 import type { MicaSettings } from "./types";
+import { FREE_CONVERSIONS_PER_DAY } from "./billing-policy";
 
 export const DEFAULT_SETTINGS: MicaSettings = {
+  constanceDeviceId: "",
+  billingEmail: "",
+  freeConversionsRemaining: FREE_CONVERSIONS_PER_DAY,
+  freeAllowanceDate: "",
+  purchasedConversions: 0,
   watchedFolders: [],
   outputFolder: "",
   quality: 82,
@@ -20,6 +26,11 @@ export function normalizeSettings(raw: Partial<MicaSettings> | null | undefined)
   const value = { ...DEFAULT_SETTINGS, ...(raw ?? {}) };
   return {
     ...value,
+    constanceDeviceId: typeof value.constanceDeviceId === "string" ? value.constanceDeviceId : "",
+    billingEmail: typeof value.billingEmail === "string" ? value.billingEmail : "",
+    freeConversionsRemaining: Math.max(0, Math.min(FREE_CONVERSIONS_PER_DAY, Math.floor(Number(value.freeConversionsRemaining) || 0))),
+    freeAllowanceDate: typeof value.freeAllowanceDate === "string" ? value.freeAllowanceDate : "",
+    purchasedConversions: Math.max(0, Math.floor(Number(value.purchasedConversions) || 0)),
     watchedFolders: Array.isArray(value.watchedFolders) ? value.watchedFolders.filter(Boolean).map((x) => x.trim().replace(/^\/|\/$/g, "")) : [],
     outputFolder: typeof value.outputFolder === "string" ? value.outputFolder.trim().replace(/^\/|\/$/g, "") : "",
     quality: Math.max(1, Math.min(100, Number(value.quality) || DEFAULT_SETTINGS.quality)),

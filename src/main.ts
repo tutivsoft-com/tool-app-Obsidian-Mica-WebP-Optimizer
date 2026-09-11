@@ -1,4 +1,6 @@
 import { Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
+import { spendPurchasedConversion, syncPurchasedConversions, withBillingLock } from "./billing";
+import { FREE_CONVERSIONS_PER_DAY, localCalendarDate } from "./billing-policy";
 import { convertToWebp } from "./converter";
 import { ConfirmScanModal, FolderPickerModal, LargerFileModal, LogModal, ProgressModal } from "./modals";
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings";
@@ -7,7 +9,11 @@ import type { BatchJournal, BatchJournalEntry, BatchProgress, ConversionLogEntry
 import { baseOutputPath, isAnimatedImage, isSupportedPath, isWatched, isWithinFolder, normalizePath, replaceReferences, scanSummary, stableHash, uniqueOutputPath } from "./utils";
 
 const PLUGIN_NAME = "Mica";
-const makeId = (): string => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+const makeId = (): string => {
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+};
 
 export default class MicaPlugin extends Plugin {
   declare settings: MicaSettings;
@@ -22,6 +28,7 @@ export default class MicaPlugin extends Plugin {
 
   async onload(): Promise<void> {
     this.settings = normalizeSettings(await this.loadData());
+    this.ensureBillingState();
     await this.saveSettings();
     this.addRibbonIcon("image", "Mica: optimize images", () => void this.runFolderPicker());
     this.addCommand({ id: "scan-current-folder", name: "Scan current folder and optimize", callback: () => void this.runCurrentFolder() });
@@ -31,6 +38,7 @@ export default class MicaPlugin extends Plugin {
     this.addCommand({ id: "rollback-last-batch", name: "Rollback most recent optimization batch", callback: () => void this.rollbackLastBatch() });
     this.addCommand({ id: "view-conversion-log", name: "View conversion log", callback: () => this.openLog() });
     this.addSettingTab(new MicaSettingTab(this.app, this));
+    void syncPurchasedConversions(this);
     this.registerEvent(this.app.vault.on("create", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
     this.registerEvent(this.app.vault.on("modify", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
     this.registerEvent(this.app.workspace.on("file-menu", (menu, file) => { if (file instanceof TFile || file instanceof TFolder) this.addFileMenu(menu, file); }));
@@ -40,6 +48,42 @@ export default class MicaPlugin extends Plugin {
   onunload(): void { this.cancelRequested = true; this.progressModal?.close(); }
   async saveSettings(): Promise<void> { await this.saveData(this.settings); }
   openLog(): void { new LogModal(this.app, this.settings.log).open(); }
+
+  private ensureBillingState(): void {
+    if (!this.settings.constanceDeviceId) {
+      const bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      this.settings.constanceDeviceId = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+    const today = localCalendarDate();
+    if (this.settings.freeAllowanceDate !== today) {
+      this.settings.freeAllowanceDate = today;
+      this.settings.freeConversionsRemaining = FREE_CONVERSIONS_PER_DAY;
+    }
+  }
+
+  private async chargeConversion(): Promise<boolean> {
+    return withBillingLock(this, async () => {
+      this.ensureBillingState();
+      if (this.settings.freeConversionsRemaining > 0) {
+        this.settings.freeConversionsRemaining -= 1;
+        await this.saveSettings();
+        return true;
+      }
+      const result = await spendPurchasedConversion(this);
+      if (result.kind === "ok") {
+        this.settings.purchasedConversions = result.balance;
+        await this.saveSettings();
+        return true;
+      }
+      if (result.kind === "insufficient") {
+        new Notice("Mica: today’s free conversions are used and no purchased credits remain. Buy more in Settings.");
+      } else {
+        new Notice("Mica: Constance could not verify your conversion balance. Nothing was converted.");
+      }
+      return false;
+    });
+  }
 
   private addFileMenu(menu: Menu, file: TFile | TFolder): void {
     if (file instanceof TFile && isSupportedPath(file.path)) menu.addItem((item) => item.setTitle("Mica: Optimize this image").setIcon("image").onClick(() => void this.runScan(file.parent instanceof TFolder ? file.parent : null, file)));
@@ -177,13 +221,58 @@ export default class MicaPlugin extends Plugin {
     }
     await this.ensureFolder(outputPath);
     await this.app.vault.createBinary(outputPath, conversion.bytes);
+    try {
+      await this.verifyWrittenWebp(outputPath, conversion.bytes);
+    } catch (error) {
+      await this.deleteGeneratedOutput(outputPath);
+      throw error;
+    }
     const journalEntry: BatchJournalEntry = { sourcePath: file.path, outputPath, sourceHash, sourceBytes: sourceBytes.byteLength, noteChanges: [], originalMoved: false };
     journal.entries.push(journalEntry);
-    await this.saveSettings();
-    const changedNotes = await this.updateReferences(file.path, outputPath);
+    try {
+      await this.saveSettings();
+    } catch (error) {
+      this.removeJournalEntry(journal, journalEntry);
+      await this.deleteGeneratedOutput(outputPath);
+      throw error;
+    }
+    let changedNotes: Array<{ path: string; originalContent: string }>;
+    try {
+      changedNotes = await this.updateReferences(file.path, outputPath);
+    } catch (error) {
+      this.removeJournalEntry(journal, journalEntry);
+      await this.deleteGeneratedOutput(outputPath);
+      throw error;
+    }
     journalEntry.noteChanges = changedNotes;
     if (changedNotes.length === 0 && this.settings.originalHandling === "review") {
+      this.removeJournalEntry(journal, journalEntry);
+      await this.deleteGeneratedOutput(outputPath);
       this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, output: outputPath, sourceBytes: sourceBytes.byteLength, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "review", reason: "No safe reference was found; original kept." });
+      return "skipped";
+    }
+    try {
+      await this.saveSettings();
+    } catch (error) {
+      await this.restoreNoteChanges(changedNotes);
+      this.removeJournalEntry(journal, journalEntry);
+      await this.deleteGeneratedOutput(outputPath);
+      throw error;
+    }
+    let allowanceGranted = false;
+    try {
+      allowanceGranted = await this.chargeConversion();
+    } catch (error) {
+      await this.restoreNoteChanges(changedNotes);
+      this.removeJournalEntry(journal, journalEntry);
+      await this.deleteGeneratedOutput(outputPath);
+      throw error;
+    }
+    if (!allowanceGranted) {
+      await this.restoreNoteChanges(changedNotes);
+      this.removeJournalEntry(journal, journalEntry);
+      await this.deleteGeneratedOutput(outputPath);
+      this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, sourceBytes: sourceBytes.byteLength, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "skipped", reason: "Conversion allowance unavailable." });
       return "skipped";
     }
     if (this.settings.originalHandling === "backup") {
@@ -195,6 +284,37 @@ export default class MicaPlugin extends Plugin {
     }
     this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, output: outputPath, sourceBytes: sourceBytes.byteLength, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "converted", reason: `hash:${sourceHash}:${conversion.metadataPreserved ? "metadata-kept" : "metadata-stripped"}${outputIsLarger ? ":larger-accepted" : ""}` });
     return "converted";
+  }
+
+  private async verifyWrittenWebp(path: string, expected: ArrayBuffer): Promise<void> {
+    const output = this.app.vault.getAbstractFileByPath(path);
+    if (!(output instanceof TFile)) throw new Error("The WebP was not found after writing.");
+    const actual = await this.app.vault.readBinary(output);
+    if (actual.byteLength !== expected.byteLength) throw new Error("The written WebP did not match the verified conversion.");
+    const expectedBytes = new Uint8Array(expected);
+    const actualBytes = new Uint8Array(actual);
+    for (let index = 0; index < expectedBytes.length; index++) {
+      if (expectedBytes[index] !== actualBytes[index]) throw new Error("The written WebP did not match the verified conversion.");
+    }
+  }
+
+  private async deleteGeneratedOutput(path: string): Promise<void> {
+    const output = this.app.vault.getAbstractFileByPath(path);
+    if (output instanceof TFile) await this.app.vault.delete(output).catch(() => undefined);
+  }
+
+  private removeJournalEntry(journal: BatchJournal, entry: BatchJournalEntry): void {
+    const index = journal.entries.indexOf(entry);
+    if (index >= 0) journal.entries.splice(index, 1);
+  }
+
+  private async restoreNoteChanges(changes: Array<{ path: string; originalContent: string }>): Promise<void> {
+    for (const change of changes.slice().reverse()) {
+      await this.withNoteLock(change.path, async () => {
+        const note = this.app.vault.getAbstractFileByPath(change.path);
+        if (note instanceof TFile) await this.app.vault.modify(note, change.originalContent);
+      });
+    }
   }
 
   private askKeepLarger(source: { path: string; name: string; extension: string; size: number }, outputBytes: number): Promise<boolean> {

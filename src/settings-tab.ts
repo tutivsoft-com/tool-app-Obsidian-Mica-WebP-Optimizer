@@ -1,4 +1,5 @@
-import { PluginSettingTab, Setting } from "obsidian";
+import { Notice, PluginSettingTab, Setting } from "obsidian";
+import { isPlaceholderPriceId, MICA_PACKS, MICA_PRICE_IDS, openCheckout, syncPurchasedConversions } from "./billing";
 import type MicaPlugin from "./main";
 
 export class MicaSettingTab extends PluginSettingTab {
@@ -13,6 +14,15 @@ export class MicaSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Watched folders").setDesc("One vault-relative folder per line. Leave empty to watch the complete vault.").addTextArea((text) => text.setValue(this.plugin.settings.watchedFolders.join("\n")).onChange(async (value) => { this.plugin.settings.watchedFolders = value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean); await this.plugin.saveSettings(); }));
     new Setting(containerEl).setName("Output folder").setDesc("Vault-relative destination. Leave empty to place WebP beside the original.").addText((text) => text.setPlaceholder("Images/WebP").setValue(this.plugin.settings.outputFolder).onChange(async (value) => { this.plugin.settings.outputFolder = value.trim().replace(/^\/|\/$/g, ""); await this.plugin.saveSettings(); }));
     new Setting(containerEl).setName("Automatic optimization").setDesc("Queue newly created or imported PNG and JPEG files in watched folders.").addToggle((toggle) => toggle.setValue(this.plugin.settings.autoOptimize).onChange(async (value) => { this.plugin.settings.autoOptimize = value; await this.plugin.saveSettings(); }));
+
+    new Setting(containerEl).setName("Billing").setHeading();
+    containerEl.createEl("p", { text: `${this.plugin.settings.freeConversionsRemaining} of 3 free successful conversions remain today. Purchased balance: ${this.plugin.settings.purchasedConversions.toLocaleString()} conversion(s).` });
+    new Setting(containerEl).setName("Billing email").setDesc("Used only to open the optional TutivSoft checkout. Mica never uploads vault media.").addText((text) => text.setPlaceholder("you@example.com").setValue(this.plugin.settings.billingEmail).onChange(async (value) => { this.plugin.settings.billingEmail = value.trim(); await this.plugin.saveSettings(); }));
+    new Setting(containerEl).setName("Purchased balance").setDesc("Refreshes the balance associated with this Obsidian install. Scans, previews, skips, and rollback never use credits.").addButton((button) => button.setButtonText("Refresh balance").onClick(async () => { await syncPurchasedConversions(this.plugin); new Notice("Mica: purchased balance refreshed."); this.display(); }));
+    for (const pack of MICA_PACKS) {
+      const priceId = MICA_PRICE_IDS[pack.key];
+      new Setting(containerEl).setName(`$${pack.dollars} conversion pack`).setDesc(`${pack.conversions.toLocaleString()} successfully written WebP conversions · one-time purchase`).addButton((button) => button.setButtonText(`Buy $${pack.dollars}`).setDisabled(isPlaceholderPriceId(priceId)).onClick(() => openCheckout(this.plugin, pack.key)));
+    }
 
     new Setting(containerEl).setName("Quality").setHeading();
     new Setting(containerEl).setName("Quality mode").setDesc("Lossy is compact. Near-lossless uses the browser's highest WebP quality and is a conservative local fallback.").addDropdown((dropdown) => dropdown.addOption("lossy", "Lossy").addOption("near-lossless", "Near-lossless").setValue(this.plugin.settings.qualityMode).onChange(async (value) => { this.plugin.settings.qualityMode = value as "lossy" | "near-lossless"; await this.plugin.saveSettings(); }));
@@ -31,6 +41,6 @@ export class MicaSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Concurrent conversions").setDesc("1–4 local encodes at once. Note rewrites are still serialized safely.").addSlider((slider) => slider.setLimits(1, 4, 1).setValue(this.plugin.settings.concurrency).setDynamicTooltip().onChange(async (value) => { this.plugin.settings.concurrency = value; await this.plugin.saveSettings(); }));
     new Setting(containerEl).setName("Review conversion log").setDesc(`${this.plugin.settings.log.length} recent event(s) retained locally.`).addButton((button) => button.setButtonText("Open log").onClick(() => this.plugin.openLog()));
     new Setting(containerEl).setName("Rollback most recent batch").setDesc("Restores note text and backed-up originals when they are still available.").addButton((button) => button.setButtonText("Rollback").setWarning().onClick(() => { void this.plugin.rollbackLastBatch(); }));
-    containerEl.createEl("p", { cls: "mica-privacy-note", text: "Privacy: Mica has no network dependency, telemetry, AI account, or cloud conversion. It only reads and writes files inside the current vault. See PRIVACY.md for the threat model." });
+    containerEl.createEl("p", { cls: "mica-privacy-note", text: "Privacy: conversion stays local and vault media is never uploaded. The optional billing network is used only for checkout and purchased-balance sync; scans, previews, skips, rollback, and the daily free allowance work without it. See PRIVACY.md for the threat model." });
   }
 }

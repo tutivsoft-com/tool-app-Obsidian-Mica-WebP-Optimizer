@@ -23,8 +23,15 @@ Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images t
 3. A journal is persisted before any note reference is rewritten.
 4. Notes are updated only when a supported reference can be matched safely.
 5. Originals remain available unless the user chooses the recoverable backup option.
+6. Billing, when needed, is checked only after the WebP has been written and verified; a failed check removes the staged output and restores note text.
 
 Automatic optimization is enabled with conservative defaults: quality 82, original files kept, metadata stripped, no resizing, and a maximum of two local encodes. The first bulk run always shows a review dialog.
+
+## Optional billing
+
+Mica includes three free successful conversions per local calendar day. After that, each successfully written WebP conversion uses one purchased conversion. Scans, previews, larger-file skips, already-processed files, failed conversions, review skips, and rollback are always free.
+
+One-time packs are $1 for 100 conversions and $10 for 1,000 conversions. The live Mica Paddle catalog is configured for checkout. The optional TutivSoft billing network is used only for checkout and purchased-balance synchronization; it never receives vault media or conversion bytes. Local conversion and the daily free allowance continue to work without billing connectivity.
 
 ## Commands
 
