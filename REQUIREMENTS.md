@@ -1,6 +1,6 @@
 # Mica WebP Optimizer — Product Requirements
 
-Status: planning
+Status: implemented — 3.3.0 MVP released
 
 ## Product promise
 
@@ -85,4 +85,3 @@ AI is not needed. Image conversion, quality checks, link discovery, and safe rep
 - Bulk runs provide clear preview, progress, skip reasons, and recovery data.
 - The user can choose quality and original-file handling without navigating complex settings.
 - The complete MVP works offline with no AI account and no paid credits.
-
