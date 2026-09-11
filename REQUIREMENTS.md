@@ -1,95 +1,87 @@
-# Kairo Quick Capture — Product Requirements
+# Mica WebP Optimizer — Product Requirements
 
-Status: implemented — 3.3.0 MVP released
+Status: implemented — 3.3.1 MVP released
 
 ## Product promise
 
-Kairo lets a user capture a thought in seconds from anywhere on the desktop, even when the Obsidian window is closed, and reliably delivers it to the user’s configured inbox or daily note.
+Mica reduces image size inside an Obsidian vault while preserving embeds, visual quality, recoverability, and user control.
 
 ## Product principles
 
-- Capture must be faster than opening Obsidian.
-- The capture path must work offline and must not require AI.
-- Never lose text because a vault, destination, or Obsidian process is unavailable.
-- Keep the interface to one small window and a few obvious actions.
-- Do not silently send captured content to a cloud service.
+- Optimize media without breaking notes.
+- Never delete the only copy before the replacement is verified.
+- Keep conversion deterministic, local, and understandable.
+- Do not process files outside the selected vault scope.
+- Avoid unnecessary settings; provide safe defaults first.
 
-## Target users and use cases
+## MVP conversion scope
 
-- A user has a fleeting idea while working in another application.
-- A user wants to capture clipboard text, a URL, or a short task without context switching.
-- A user wants everything captured today in one inbox or daily note.
-- A user captures thoughts while Obsidian is closed or busy.
+1. Convert eligible PNG and JPEG/JPG files to WebP locally.
+2. Preserve transparency for PNG sources.
+3. Support configurable lossy quality and a lossless or near-lossless option where the encoder supports it.
+4. Preserve or intentionally strip metadata according to a visible setting; default to stripping unnecessary location/device metadata while explaining the choice.
+5. Keep original dimensions by default and optionally limit maximum dimensions for oversized images.
+6. Skip animated images, SVGs, GIFs, unsupported formats, remote URLs, and files excluded by configuration.
+7. Detect newly pasted or imported eligible media and place conversions in a background queue.
+8. Provide a manual command to scan and optimize an existing folder or the complete vault.
 
-## MVP requirements
+## Embed and link safety
 
-### Capture window
+9. Detect Markdown embeds, Obsidian wikilink embeds, ordinary Markdown links, and supported HTML references to a converted file.
+10. Update references only after the WebP replacement has been written and verified.
+11. Preserve link fragments, captions, aliases, and relative-path behavior.
+12. Handle filename collisions by using a deterministic unique name and showing the choice before applying it.
+13. Search the vault for references before offering deletion or archival of an original.
+14. Never delete originals automatically in the MVP; allow the user to keep, move to a backup folder, or review them after conversion.
+15. If a reference cannot be safely updated, keep the original and report the conversion as requiring review.
 
-1. Provide a configurable global keyboard shortcut to show, focus, and hide the scratchpad.
-2. Open as a small floating desktop window that stays above other windows while active.
-3. Focus the text area automatically and support keyboard-only submission and dismissal.
-4. Provide clear actions for Save, Save and close, and Cancel.
-5. Support plain text, pasted text, URLs, and multiline notes without truncation.
-6. Show a compact status indicator for saving, saved, queued, or failed.
+## MVP workflow and settings
 
-### Vault delivery
+16. Provide first-run defaults that require no tuning for ordinary pasted screenshots.
+17. Let the user configure watched folders, output location, quality, metadata policy, maximum dimensions, and original-file handling.
+18. Show an estimate of source count, likely size change, and files that will be skipped before a bulk run.
+19. Provide a preview for representative files and a clear confirmation for a bulk operation.
+20. Show progress, current file, completed/failed/skipped counts, and Cancel.
+21. Resume safely after restart without converting the same source twice.
+22. Maintain a conversion log with source, output, size before/after, quality mode, and result.
+23. Create recoverable backups or an undo journal before link rewrites or original-file moves.
+24. Provide rollback for the most recent batch when source files remain available.
 
-7. Let the user select a vault folder and configure either an inbox file or a daily-note folder.
-8. Support a configurable capture template with timestamp, source application when available, and captured text.
-9. Append to the selected destination without overwriting existing content.
-10. Create a missing daily note or inbox file only after explicit configuration permits it.
-11. Write safely and detect a destination change before replacing file contents.
-12. Queue captures locally when the vault is unavailable, then retry automatically when it becomes available.
-13. Preserve capture order and show queued items that still need delivery.
-14. Prevent accidental duplicate delivery when a retry follows a successful write.
+## Quality and performance
 
-### Configuration
+25. Verify that each generated WebP can be decoded before it replaces or becomes the preferred reference.
+26. Preserve image orientation and alpha behavior correctly.
+27. Avoid freezing the Obsidian interface during large batches.
+28. Provide a configurable concurrency limit and pause/resume controls if needed for large vaults.
+29. Report when a conversion makes the file larger and offer to keep the original instead.
+30. Never alter note text unrelated to the changed media reference.
 
-15. Provide simple settings for shortcut, vault, destination mode, daily-note format, template, timestamp format, and launch behavior.
-16. Provide a first-run setup flow that validates the vault and writes a test capture only after confirmation.
-17. Allow the user to choose whether the window closes after saving.
-18. Allow optional launch-at-login on supported desktop platforms, disabled by default.
-19. Provide a command to open settings and a command to flush queued captures.
+## AI decision
 
-### Reliability and accessibility
-
-20. Recover queued captures after application restart.
-21. Make the window usable with keyboard navigation, visible focus, readable contrast, and screen readers.
-22. Never place passwords, API keys, or sensitive diagnostics in capture files or logs.
-23. Provide a visible error with a copyable diagnostic summary without exposing captured text by default.
-
-## Optional AI features
-
-AI is not part of the capture path or required for the MVP. A later opt-in assistant may:
-
-- suggest a title;
-- suggest tags or a destination folder;
-- convert a capture into a short task or structured note;
-- summarize a long pasted capture.
-
-AI must run only after the capture is safely stored, require an explicit per-capture action, explain that content leaves the vault, and charge credits only for an accepted AI request. Failed requests must not affect the saved capture.
+AI is not needed. Image conversion, quality checks, link discovery, and safe replacement are deterministic local operations. AI would add cost and privacy exposure without improving the core result. No AI credits are required.
 
 ## Useful post-MVP features
 
-- Capture current window title and source URL with user permission.
-- Quick actions such as “task”, “quote”, “link”, and “journal”.
-- Multiple vault profiles.
-- Tray/menu-bar controls and pause mode.
-- Search, edit, retry, and export for queued captures.
-- Optional local-only classification if a supported local model is available.
+- Duplicate-image detection using local hashes and perceptual fingerprints.
+- Before/after visual comparison and a quality recommendation.
+- Bulk optimization reports by folder, file type, and savings.
+- AVIF support when the Obsidian compatibility story is clear.
+- Automatic cleanup suggestions for verified unreferenced originals.
+- Scheduled optimization with quiet notifications only for meaningful failures or savings.
+- Optional image resizing presets for thumbnails and archival media.
 
 ## Out of scope for the MVP
 
-- Full note editing, rich text, attachments, or handwriting.
-- Cloud synchronization of the scratchpad queue.
-- Automatic AI processing without user action.
-- Mobile capture; desktop reliability comes first.
+- Cloud conversion or uploading vault media.
+- Automatic deletion of originals.
+- Video, audio, PDF, SVG, or animated-image optimization.
+- AI-generated image edits or descriptions.
 
 ## Acceptance criteria
 
-- A new user can complete setup and save a capture in under one minute.
-- A normal capture reaches the configured note in two interactions or fewer after the shortcut is pressed.
-- Captures made while Obsidian is closed are delivered after the vault becomes available.
-- A failed write leaves the complete text in a recoverable queue.
-- Repeated retries never create duplicate entries.
-- The MVP remains fully useful with AI disabled and without an internet connection.
+- A pasted PNG or JPEG can be converted in the background without blocking ordinary note editing.
+- All supported embeds and links continue to open after conversion.
+- A failed or interrupted operation leaves the original usable.
+- Bulk runs provide clear preview, progress, skip reasons, and recovery data.
+- The user can choose quality and original-file handling without navigating complex settings.
+- The complete MVP works offline with no AI account and no paid credits.
