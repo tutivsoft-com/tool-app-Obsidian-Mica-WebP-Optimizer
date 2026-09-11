@@ -1,0 +1,23 @@
+.mica-preview-list,
+.mica-log-list {
+  max-height: 18rem;
+  overflow: auto;
+  padding-inline-start: 1.4rem;
+}
+
+.mica-progress-status {
+  white-space: pre-line;
+  margin-block: 1rem;
+}
+
+.mica-folder-select {
+  width: 100%;
+  min-height: 2rem;
+  margin-block: 0.5rem 1rem;
+}
+
+.mica-privacy-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-top: 1.5rem;
+}

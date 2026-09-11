@@ -1,0 +1,10 @@
+{
+  "id": "mica-webp-optimizer",
+  "name": "Mica WebP Optimizer",
+  "version": "3.3.0",
+  "minAppVersion": "1.5.0",
+  "description": "Optimize PNG and JPEG media locally as verified WebP files without breaking Obsidian links.",
+  "author": "TutivSoft",
+  "authorUrl": "https://github.com/tutivsoft-com",
+  "isDesktopOnly": false
+}
