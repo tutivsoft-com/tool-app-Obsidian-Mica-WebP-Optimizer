@@ -1,10 +1,10 @@
 {
-  "id": "kairo-quick-capture",
-  "name": "Kairo Quick Capture",
-  "version": "3.3.0",
+  "id": "mica-webp-optimizer",
+  "name": "Mica WebP Optimizer",
+  "version": "3.3.1",
   "minAppVersion": "1.5.0",
-  "description": "Capture fleeting thoughts quickly and deliver them safely to an inbox or daily note.",
-  "author": "Rahul",
+  "description": "Optimize PNG and JPEG media locally as verified WebP files without breaking note links.",
+  "author": "TutivSoft",
   "authorUrl": "https://github.com/tutivsoft-com",
-  "isDesktopOnly": true
+  "isDesktopOnly": false
 }
