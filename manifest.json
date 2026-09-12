@@ -1,7 +1,7 @@
 {
   "id": "mica-webp-optimizer",
   "name": "Mica WebP Optimizer",
-  "version": "3.4.3",
+  "version": "3.4.4",
   "minAppVersion": "1.5.0",
   "description": "Optimize PNG and JPEG media locally as verified WebP files without breaking note links.",
   "author": "TutivSoft",
