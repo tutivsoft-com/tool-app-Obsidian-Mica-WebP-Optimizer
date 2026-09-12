@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.3 - 2026-09-12
+
+- Synchronized the public mirror's canonical and manifest version surfaces after the billing rollout. No runtime behavior changed.
+
+
 ## 3.4.2 — 2026-09-11
 
 - Final Mica release with live Paddle catalog billing for `$1/100` and `$10/1,000` conversion packs; source and publish artifacts are synchronized for the public release.
