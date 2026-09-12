@@ -8,6 +8,7 @@ export interface MicaSettings {
   freeConversionsRemaining: number;
   freeAllowanceDate: string;
   purchasedConversions: number;
+  pendingSpendEvents: Array<{ eventId: string; amount: number }>;
   watchedFolders: string[];
   outputFolder: string;
   quality: number;

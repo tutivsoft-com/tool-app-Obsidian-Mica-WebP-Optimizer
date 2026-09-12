@@ -1,5 +1,5 @@
 import { Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
-import { spendPurchasedConversion, syncPurchasedConversions, withBillingLock } from "./billing";
+import { retryPendingSpendEvents, spendPurchasedConversion, syncPurchasedConversions, withBillingLock } from "./billing";
 import { FREE_CONVERSIONS_PER_DAY, localCalendarDate } from "./billing-policy";
 import { convertToWebp } from "./converter";
 import { ConfirmScanModal, FolderPickerModal, LargerFileModal, LogModal, ProgressModal } from "./modals";
@@ -38,7 +38,7 @@ export default class MicaPlugin extends Plugin {
     this.addCommand({ id: "rollback-last-batch", name: "Rollback most recent optimization batch", callback: () => void this.rollbackLastBatch() });
     this.addCommand({ id: "view-conversion-log", name: "View conversion log", callback: () => this.openLog() });
     this.addSettingTab(new MicaSettingTab(this.app, this));
-    void syncPurchasedConversions(this);
+    void syncPurchasedConversions(this).then(() => retryPendingSpendEvents(this));
     this.registerEvent(this.app.vault.on("create", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
     this.registerEvent(this.app.vault.on("modify", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
     this.registerEvent(this.app.workspace.on("file-menu", (menu, file) => { if (file instanceof TFile || file instanceof TFolder) this.addFileMenu(menu, file); }));
@@ -69,6 +69,10 @@ export default class MicaPlugin extends Plugin {
         this.settings.freeConversionsRemaining -= 1;
         await this.saveSettings();
         return true;
+      }
+      if (this.settings.pendingSpendEvents.length > 0) {
+        new Notice("Mica: a previous credit spend is still being reconciled. Try again when the connection is restored.");
+        return false;
       }
       const result = await spendPurchasedConversion(this);
       if (result.kind === "ok") {

@@ -58,24 +58,39 @@ export async function syncPurchasedConversions(plugin: MicaPlugin): Promise<void
   });
 }
 
-export async function spendPurchasedConversion(plugin: MicaPlugin): Promise<SpendResult> {
+export async function spendPurchasedConversion(plugin: MicaPlugin, stableEventId = createBillingEventId()): Promise<SpendResult> {
   if (!plugin.settings.constanceDeviceId) return { kind: "error" };
+  plugin.settings.pendingSpendEvents = [...plugin.settings.pendingSpendEvents, { eventId: stableEventId, amount: 1 }]
+    .filter((item, index, items) => items.findIndex((candidate) => candidate.eventId === item.eventId) === index);
+  await plugin.saveSettings();
   try {
     const response = await requestUrl({
       url: `${BASE_URL}/api/v1/public/browser/credits/spend`,
       method: "POST",
       throw: false,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ app_id: MICA_APP_ID, external_customer_id: plugin.settings.constanceDeviceId, machine_id: plugin.settings.constanceDeviceId, amount: 1, event_id: createBillingEventId() })
+      body: JSON.stringify({ app_id: MICA_APP_ID, external_customer_id: plugin.settings.constanceDeviceId, machine_id: plugin.settings.constanceDeviceId, amount: 1, event_id: stableEventId })
     });
-    if (response.status === 402 || response.status === 404) return { kind: "insufficient" };
+    if (response.status === 402 || response.status === 404) { plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== stableEventId); await plugin.saveSettings(); return { kind: "insufficient" }; }
     if (response.status < 200 || response.status >= 300) return { kind: "error" };
     const balance = Number(response.json?.data?.credits?.balance);
     if (!Number.isFinite(balance)) return { kind: "error" };
+    plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== stableEventId);
     return { kind: "ok", balance: Math.max(0, Math.floor(balance)) };
   } catch (error) {
     console.error("Mica: Constance credit spend failed", error);
     return { kind: "error" };
+  }
+}
+
+export async function retryPendingSpendEvents(plugin: MicaPlugin): Promise<void> {
+  for (const pending of [...(plugin.settings.pendingSpendEvents ?? [])]) {
+    const result = await spendPurchasedConversion(plugin, pending.eventId);
+    if (result.kind === "error") break;
+    if (result.kind === "ok") plugin.settings.purchasedConversions = result.balance;
+    else plugin.settings.purchasedConversions = 0;
+    plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== pending.eventId);
+    await plugin.saveSettings();
   }
 }
 
