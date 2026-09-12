@@ -3,10 +3,6 @@
 ## 3.4.3 - 2026-09-12
 
 - Incremented and synchronized the canonical, package, manifest, and publish version surfaces after the billing rollout. No runtime behavior changed in this metadata release.
-
-
-## Unreleased — 2026-09-12
-
 - Persisted credit-spend attempts before remote work and reused the same event
   ID when a response is lost or a request is retried.
 
