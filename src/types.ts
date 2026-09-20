@@ -5,6 +5,8 @@ export type OriginalHandling = "keep" | "backup" | "review";
 export interface MicaSettings {
   constanceDeviceId: string;
   billingEmail: string;
+  billingAccessToken: string;
+  billingAccountLinked: boolean;
   freeConversionsRemaining: number;
   freeAllowanceDate: string;
   purchasedConversions: number;

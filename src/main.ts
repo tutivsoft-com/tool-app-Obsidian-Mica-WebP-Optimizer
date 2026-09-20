@@ -1,12 +1,14 @@
 import { Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
 import { retryPendingSpendEvents, spendPurchasedConversion, syncPurchasedConversions, withBillingLock } from "./billing";
-import { FREE_CONVERSIONS_PER_DAY, localCalendarDate } from "./billing-policy";
+import { createBillingEventId, FREE_CONVERSIONS_PER_DAY, localCalendarDate } from "./billing-policy";
+import { claimAccountFreeUsage } from "./constance-account";
 import { convertToWebp } from "./converter";
 import { ConfirmScanModal, FolderPickerModal, LargerFileModal, LogModal, ProgressModal } from "./modals";
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings";
 import { MicaSettingTab } from "./settings-tab";
 import type { BatchJournal, BatchJournalEntry, BatchProgress, ConversionLogEntry, MicaSettings } from "./types";
 import { baseOutputPath, isAnimatedImage, isSupportedPath, isWatched, isWithinFolder, normalizePath, replaceReferences, scanSummary, stableHash, uniqueOutputPath } from "./utils";
+import { PluginSupport } from "./plugin-support";
 
 const PLUGIN_NAME = "Mica";
 const makeId = (): string => {
@@ -17,6 +19,7 @@ const makeId = (): string => {
 
 export default class MicaPlugin extends Plugin {
   declare settings: MicaSettings;
+  support!: PluginSupport;
   private queue: TFile[] = [];
   private queued = new Set<string>();
   private processing = false;
@@ -27,6 +30,8 @@ export default class MicaPlugin extends Plugin {
   private noteLocks = new Map<string, Promise<void>>();
 
   async onload(): Promise<void> {
+    this.support = new PluginSupport(this, { name: "Mica WebP Optimizer", summary: "Convert supported vault images to WebP with preview, backup, reference updates, and rollback.", quickStart: ["Open Mica optimizer.", "Choose a folder or image.", "Review estimated changes before conversion."], commands: ["Optimize images", "View conversion log", "Rollback last batch"], troubleshooting: ["Use Copy debug log before reporting a problem.", "Check that desktop image conversion is available and the file is not animated."] });
+    this.support.start();
     this.settings = normalizeSettings(await this.loadData());
     this.ensureBillingState();
     await this.saveSettings();
@@ -65,10 +70,26 @@ export default class MicaPlugin extends Plugin {
   private async chargeConversion(): Promise<boolean> {
     return withBillingLock(this, async () => {
       this.ensureBillingState();
-      if (this.settings.freeConversionsRemaining > 0) {
-        this.settings.freeConversionsRemaining -= 1;
+      if (!this.settings.billingAccessToken || !this.settings.billingAccountLinked) {
+        new Notice("Mica: sign in or create a billing account in plugin settings before converting.");
+        return false;
+      }
+      const free = await claimAccountFreeUsage(this.settings, "mica-webp-optimizer", this.settings.constanceDeviceId, `free_${createBillingEventId()}`, 1);
+      if (free.kind === "ok") {
+        this.settings.freeConversionsRemaining = free.remaining;
         await this.saveSettings();
         return true;
+      }
+      if (free.kind === "auth-required") {
+        this.settings.billingAccessToken = "";
+        this.settings.billingAccountLinked = false;
+        await this.saveSettings();
+        new Notice("Mica: your billing session expired. Sign in again in plugin settings.");
+        return false;
+      }
+      if (free.kind === "error") {
+        new Notice("Mica: the account allowance could not be verified. Nothing was converted.");
+        return false;
       }
       if (this.settings.pendingSpendEvents.length > 0) {
         new Notice("Mica: a previous credit spend is still being reconciled. Try again when the connection is restored.");

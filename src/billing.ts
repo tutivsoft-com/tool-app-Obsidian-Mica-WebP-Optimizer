@@ -95,6 +95,7 @@ export async function retryPendingSpendEvents(plugin: MicaPlugin): Promise<void>
 }
 
 export function openCheckout(plugin: MicaPlugin, pack: MicaPack): void {
+  if (!plugin.settings.billingAccessToken || !plugin.settings.billingAccountLinked) { new Notice("Sign in or create a billing account in Mica settings before buying conversions."); return; }
   const email = plugin.settings.billingEmail.trim();
   if (!email || !email.includes("@")) { new Notice("Enter a valid billing email in Mica settings first."); return; }
   const priceId = MICA_PRICE_IDS[pack];

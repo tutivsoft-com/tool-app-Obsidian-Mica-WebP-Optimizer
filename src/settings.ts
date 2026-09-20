@@ -4,6 +4,8 @@ import { FREE_CONVERSIONS_PER_DAY } from "./billing-policy";
 export const DEFAULT_SETTINGS: MicaSettings = {
   constanceDeviceId: "",
   billingEmail: "",
+  billingAccessToken: "",
+  billingAccountLinked: false,
   freeConversionsRemaining: FREE_CONVERSIONS_PER_DAY,
   freeAllowanceDate: "",
   purchasedConversions: 0,
@@ -29,6 +31,8 @@ export function normalizeSettings(raw: Partial<MicaSettings> | null | undefined)
     ...value,
     constanceDeviceId: typeof value.constanceDeviceId === "string" ? value.constanceDeviceId : "",
     billingEmail: typeof value.billingEmail === "string" ? value.billingEmail : "",
+    billingAccessToken: typeof value.billingAccessToken === "string" ? value.billingAccessToken : "",
+    billingAccountLinked: value.billingAccountLinked === true && Boolean(value.billingAccessToken),
     freeConversionsRemaining: Math.max(0, Math.min(FREE_CONVERSIONS_PER_DAY, Math.floor(Number(value.freeConversionsRemaining) || 0))),
     freeAllowanceDate: typeof value.freeAllowanceDate === "string" ? value.freeAllowanceDate : "",
     purchasedConversions: Math.max(0, Math.floor(Number(value.purchasedConversions) || 0)),
