@@ -1,6 +1,7 @@
 import { Notice, requestUrl } from "obsidian";
 import type MicaPlugin from "./main";
 import { BillingLock, createBillingEventId, isPlaceholderPriceId } from "./billing-policy";
+import { spendAccountCredits } from "./constance-account";
 
 export { isPlaceholderPriceId } from "./billing-policy";
 
@@ -38,15 +39,15 @@ export type SpendResult =
 
 export async function syncPurchasedConversions(plugin: MicaPlugin): Promise<void> {
   await withBillingLock(plugin, async () => {
-    if (!plugin.settings.constanceDeviceId) return;
+    if (!plugin.settings.constanceDeviceId || !plugin.settings.billingAccessToken || !plugin.settings.billingAccountLinked) return;
     try {
       const response = await requestUrl({
-        url: `${BASE_URL}/api/v1/public/browser/entitlements`,
-        method: "POST",
+        url: `${BASE_URL}/api/v1/billing/entitlements/me?${new URLSearchParams({ app_id: MICA_APP_ID, installation_id: plugin.settings.constanceDeviceId }).toString()}`,
+        method: "GET",
         throw: false,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ app_id: MICA_APP_ID, external_customer_id: plugin.settings.constanceDeviceId, machine_id: plugin.settings.constanceDeviceId })
+        headers: { Authorization: `Bearer ${plugin.settings.billingAccessToken}` },
       });
+      if (response.status === 401 || response.status === 403 || response.status === 404) { plugin.settings.billingAccessToken = ""; plugin.settings.billingAccountLinked = false; await plugin.saveSettings(); return; }
       if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}`);
       const balance = Number(response.json?.data?.credits?.balance);
       if (!Number.isFinite(balance)) throw new Error("The entitlement response did not contain a valid balance.");
@@ -64,16 +65,11 @@ export async function spendPurchasedConversion(plugin: MicaPlugin, stableEventId
     .filter((item, index, items) => items.findIndex((candidate) => candidate.eventId === item.eventId) === index);
   await plugin.saveSettings();
   try {
-    const response = await requestUrl({
-      url: `${BASE_URL}/api/v1/public/browser/credits/spend`,
-      method: "POST",
-      throw: false,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ app_id: MICA_APP_ID, external_customer_id: plugin.settings.constanceDeviceId, machine_id: plugin.settings.constanceDeviceId, amount: 1, event_id: stableEventId })
-    });
-    if (response.status === 402 || response.status === 404) { plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== stableEventId); await plugin.saveSettings(); return { kind: "insufficient" }; }
-    if (response.status < 200 || response.status >= 300) return { kind: "error" };
-    const balance = Number(response.json?.data?.credits?.balance);
+    const result = await spendAccountCredits(plugin.settings, MICA_APP_ID, plugin.settings.constanceDeviceId, stableEventId, 1);
+    if (result.kind === "auth-required") { plugin.settings.billingAccessToken = ""; plugin.settings.billingAccountLinked = false; await plugin.saveSettings(); return { kind: "error" }; }
+    if (result.kind === "insufficient") { plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== stableEventId); await plugin.saveSettings(); return { kind: "insufficient" }; }
+    if (result.kind === "error") return { kind: "error" };
+    const balance = Number(result.balance);
     if (!Number.isFinite(balance)) return { kind: "error" };
     plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== stableEventId);
     return { kind: "ok", balance: Math.max(0, Math.floor(balance)) };
