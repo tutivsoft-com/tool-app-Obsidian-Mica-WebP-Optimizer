@@ -2,7 +2,7 @@
 
 ## 3.4.5 - 2026-09-20
 
-- Prepared the next patch version across the public release metadata.
+- Prepared the next patch version across source, publish, and public metadata.
 - No runtime behavior changed in this documentation and version bump.
 
 ## 3.4.4 - 2026-09-20
@@ -15,6 +15,11 @@
 - Incremented and synchronized the canonical, package, manifest, and publish version surfaces after the billing rollout. No runtime behavior changed in this metadata release.
 - Persisted credit-spend attempts before remote work and reused the same event
   ID when a response is lost or a request is retried.
+
+## 3.4.8 - 2026-09-21
+
+- Incremented the release version and synchronized the source-inclusive public artifact.
+- Verified build, tests, syntax, and release metadata before publication.
 
 ## 3.4.2 — 2026-09-11
 
