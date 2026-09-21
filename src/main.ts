@@ -74,14 +74,22 @@ export default class MicaPlugin extends Plugin {
         new Notice("Mica: sign in or create a billing account in plugin settings before converting.");
         return false;
       }
-      const free = await claimAccountFreeUsage(this.settings, "mica-webp-optimizer", this.settings.constanceDeviceId, `free_${createBillingEventId()}`, 1);
+      const pendingFreeUsage = this.settings.pendingFreeUsageEvents.find((item) => item.amount === 1) ?? { eventId: `free_${createBillingEventId()}`, amount: 1 };
+      if (!this.settings.pendingFreeUsageEvents.some((item) => item.eventId === pendingFreeUsage.eventId)) {
+        this.settings.pendingFreeUsageEvents = [...this.settings.pendingFreeUsageEvents, pendingFreeUsage];
+        await this.saveSettings();
+      }
+      const free = await claimAccountFreeUsage(this.settings, "mica-webp-optimizer", this.settings.constanceDeviceId, pendingFreeUsage.eventId, pendingFreeUsage.amount, () => this.saveSettings());
       if (free.kind === "ok") {
+        this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter((item) => item.eventId !== pendingFreeUsage.eventId);
         this.settings.freeConversionsRemaining = free.remaining;
         await this.saveSettings();
         return true;
       }
       if (free.kind === "auth-required") {
         this.settings.billingAccessToken = "";
+        this.settings.billingRefreshToken = "";
+        this.settings.billingAccessTokenExpiresAt = 0;
         this.settings.billingAccountLinked = false;
         await this.saveSettings();
         new Notice("Mica: your billing session expired. Sign in again in plugin settings.");
@@ -91,6 +99,8 @@ export default class MicaPlugin extends Plugin {
         new Notice("Mica: the account allowance could not be verified. Nothing was converted.");
         return false;
       }
+      this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter((item) => item.eventId !== pendingFreeUsage.eventId);
+      await this.saveSettings();
       if (this.settings.pendingSpendEvents.length > 0) {
         new Notice("Mica: a previous credit spend is still being reconciled. Try again when the connection is restored.");
         return false;

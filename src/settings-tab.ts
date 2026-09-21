@@ -22,7 +22,7 @@ export class MicaSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Purchased balance").setDesc("Refreshes the balance associated with this Obsidian install. Scans, previews, skips, and rollback never use credits.").addButton((button) => button.setButtonText("Refresh balance").onClick(async () => { await syncPurchasedConversions(this.plugin); new Notice("Mica: purchased balance refreshed."); this.display(); }));
     for (const pack of MICA_PACKS) {
       const priceId = MICA_PRICE_IDS[pack.key];
-      new Setting(containerEl).setName(`$${pack.dollars} conversion pack`).setDesc(`${pack.conversions.toLocaleString()} successfully written WebP conversions · one-time purchase`).addButton((button) => button.setButtonText(`Buy $${pack.dollars}`).setDisabled(isPlaceholderPriceId(priceId)).onClick(() => openCheckout(this.plugin, pack.key)));
+      new Setting(containerEl).setName(`$${pack.dollars} conversion pack`).setDesc(`${pack.conversions.toLocaleString()} successfully written WebP conversions · one-time purchase · return here and refresh balance after payment`).addButton((button) => button.setButtonText(`Buy $${pack.dollars}`).setDisabled(isPlaceholderPriceId(priceId)).onClick(() => void openCheckout(this.plugin, pack.key)));
     }
 
     new Setting(containerEl).setName("Quality").setHeading();

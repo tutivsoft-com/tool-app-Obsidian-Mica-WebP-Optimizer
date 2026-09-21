@@ -5,11 +5,15 @@ export const DEFAULT_SETTINGS: MicaSettings = {
   constanceDeviceId: "",
   billingEmail: "",
   billingAccessToken: "",
+  billingRefreshToken: "",
+  billingAccessTokenExpiresAt: 0,
   billingAccountLinked: false,
   freeConversionsRemaining: FREE_CONVERSIONS_PER_DAY,
   freeAllowanceDate: "",
   purchasedConversions: 0,
   pendingSpendEvents: [],
+  pendingFreeUsageEvents: [],
+  pendingCheckout: null,
   watchedFolders: [],
   outputFolder: "",
   quality: 82,
@@ -27,16 +31,26 @@ export const DEFAULT_SETTINGS: MicaSettings = {
 
 export function normalizeSettings(raw: Partial<MicaSettings> | null | undefined): MicaSettings {
   const value = { ...DEFAULT_SETTINGS, ...(raw ?? {}) };
+  const normalizePendingEvents = (events: unknown): Array<{ eventId: string; amount: number }> => Array.isArray(events)
+    ? events.filter((item): item is { eventId: string; amount: number } => Boolean(item) && typeof item === "object" && typeof (item as { eventId?: unknown }).eventId === "string" && Number.isInteger((item as { amount?: unknown }).amount) && Number((item as { amount: number }).amount) > 0)
+    : [];
+  const pendingCheckout = value.pendingCheckout && (value.pendingCheckout.pack === "usd_001" || value.pendingCheckout.pack === "usd_010") && typeof value.pendingCheckout.eventId === "string"
+    ? { eventId: value.pendingCheckout.eventId, pack: value.pendingCheckout.pack }
+    : null;
   return {
     ...value,
     constanceDeviceId: typeof value.constanceDeviceId === "string" ? value.constanceDeviceId : "",
     billingEmail: typeof value.billingEmail === "string" ? value.billingEmail : "",
     billingAccessToken: typeof value.billingAccessToken === "string" ? value.billingAccessToken : "",
+    billingRefreshToken: typeof value.billingRefreshToken === "string" ? value.billingRefreshToken : "",
+    billingAccessTokenExpiresAt: Math.max(0, Number(value.billingAccessTokenExpiresAt) || 0),
     billingAccountLinked: value.billingAccountLinked === true && Boolean(value.billingAccessToken),
     freeConversionsRemaining: Math.max(0, Math.min(FREE_CONVERSIONS_PER_DAY, Math.floor(Number(value.freeConversionsRemaining) || 0))),
     freeAllowanceDate: typeof value.freeAllowanceDate === "string" ? value.freeAllowanceDate : "",
     purchasedConversions: Math.max(0, Math.floor(Number(value.purchasedConversions) || 0)),
-    pendingSpendEvents: Array.isArray(value.pendingSpendEvents) ? value.pendingSpendEvents.filter((item) => item && typeof item.eventId === "string" && Number.isInteger(item.amount) && item.amount > 0) : [],
+    pendingSpendEvents: normalizePendingEvents(value.pendingSpendEvents),
+    pendingFreeUsageEvents: normalizePendingEvents(value.pendingFreeUsageEvents),
+    pendingCheckout,
     watchedFolders: Array.isArray(value.watchedFolders) ? value.watchedFolders.filter(Boolean).map((x) => x.trim().replace(/^\/|\/$/g, "")) : [],
     outputFolder: typeof value.outputFolder === "string" ? value.outputFolder.trim().replace(/^\/|\/$/g, "") : "",
     quality: Math.max(1, Math.min(100, Number(value.quality) || DEFAULT_SETTINGS.quality)),

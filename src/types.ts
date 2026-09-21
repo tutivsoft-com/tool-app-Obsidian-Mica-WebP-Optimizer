@@ -1,16 +1,21 @@
 export type QualityMode = "lossy" | "near-lossless";
 export type MetadataPolicy = "strip" | "keep";
 export type OriginalHandling = "keep" | "backup" | "review";
+export type MicaPack = "usd_001" | "usd_010";
 
 export interface MicaSettings {
   constanceDeviceId: string;
   billingEmail: string;
   billingAccessToken: string;
+  billingRefreshToken: string;
+  billingAccessTokenExpiresAt: number;
   billingAccountLinked: boolean;
   freeConversionsRemaining: number;
   freeAllowanceDate: string;
   purchasedConversions: number;
   pendingSpendEvents: Array<{ eventId: string; amount: number }>;
+  pendingFreeUsageEvents: Array<{ eventId: string; amount: number }>;
+  pendingCheckout: { eventId: string; pack: MicaPack } | null;
   watchedFolders: string[];
   outputFolder: string;
   quality: number;

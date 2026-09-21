@@ -1,6 +1,6 @@
 # Mica WebP Optimizer
 
-Version: `3.4.9`
+Version: `3.4.10`
 
 
 Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images to verified WebP files while protecting note links and original media.
@@ -34,7 +34,7 @@ Automatic optimization is enabled with conservative defaults: quality 82, origin
 
 Mica includes three free successful conversions per local calendar day. After that, each successfully written WebP conversion uses one purchased conversion. Scans, previews, larger-file skips, already-processed files, failed conversions, review skips, and rollback are always free.
 
-One-time packs are $1 for 100 conversions and $10 for 1,000 conversions. The live Mica Paddle catalog is configured for checkout. The optional TutivSoft billing network is used only for checkout and purchased-balance synchronization; it never receives vault media or conversion bytes. Local conversion and the daily free allowance continue to work without billing connectivity.
+One-time packs are $1 for 100 conversions and $10 for 1,000 conversions. Signed-in installations use Constance's authenticated, idempotent checkout route with server-owned plan codes; the hosted `/buy` URL remains a compatibility fallback. After payment, return to Mica and refresh Purchased balance—the billing webhook, not the browser return, is authoritative. The optional TutivSoft billing network is used only for account linking, checkout, usage claims, and purchased-balance synchronization; it never receives vault media or conversion bytes. Image processing remains local, but allowance and paid-credit checks require billing connectivity.
 
 ## Commands
 

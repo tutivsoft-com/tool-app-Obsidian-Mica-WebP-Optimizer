@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.4.10 - 2026-09-21
+
+- Migrated signed-in checkout to Constance's authenticated `plan_code` and
+  `Idempotency-Key` contract, retaining `/buy` as a compatibility fallback.
+- Persisted free-usage claim event IDs so uncertain responses are retried
+  idempotently instead of creating a second claim.
+- Added rotating refresh-token session handling for the central service's
+  short-lived access tokens and revoked sessions on sign-out.
+
 ## 3.4.9 - 2026-09-21
 
 - Incremented release metadata without rebuilding the plugin.

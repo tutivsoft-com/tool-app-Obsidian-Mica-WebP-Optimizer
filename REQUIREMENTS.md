@@ -48,8 +48,8 @@ Mica reduces image size inside an Obsidian vault while preserving embeds, visual
 24. Provide rollback for the most recent batch when source files remain available.
 25. Allow three free successful conversions per local calendar day, then consume one purchased conversion only for each successfully written and verified WebP.
 26. Keep scans, previews, skips, failed conversions, and rollback free; never charge before the safe verified-write boundary.
-27. Use the unsigned browser-relay billing pattern with a stable per-install identity, serialized local billing operations, server-enforced available balance, and synchronized purchased balance.
-28. Reject placeholder or malformed Paddle price identifiers without opening checkout; ship only provisioned Mica catalog identifiers.
+27. Use account-linked billing with a stable per-install identity, bearer-authenticated installation linking, server-authoritative free usage and paid balance, serialized local billing operations, durable event IDs, and synchronized purchased balance. Keep the unsigned `/buy` browser URL only as a compatibility fallback.
+28. Use server-owned Constance plan codes for authenticated checkout and reject placeholder or malformed Paddle price identifiers before opening the compatibility fallback; ship only provisioned Mica catalog identifiers.
 
 ## Quality and performance
 
@@ -88,4 +88,4 @@ AI is not needed. Image conversion, quality checks, link discovery, and safe rep
 - A failed or interrupted operation leaves the original usable and does not consume a conversion allowance.
 - Bulk runs provide clear preview, progress, skip reasons, and recovery data.
 - The user can choose quality, original-file handling, and optional billing without navigating complex settings.
-- Core local conversion works offline with no AI account; paid conversion balance is optional and requires billing connectivity only for checkout/synchronization.
+- Image conversion and vault handling remain local with no AI account; account-linked allowance and paid-credit authorization require billing connectivity, while vault media is never uploaded.
