@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.4.11 - 2026-09-23
+
+- Process eligible images that arrive while another conversion batch is running.
+- Clear queued images when a batch is cancelled.
+- Ask users to open a note before scanning the current folder, avoiding an accidental whole-vault scan.
+- Keep a verified WebP and its updated links when a paid credit spend has an uncertain response, so later reconciliation cannot charge for a removed conversion. Keep the original in place until that spend is verified.
+- Retry pending credit spends after sign-in or balance refresh as well as on startup.
+
 ## 3.4.10 - 2026-09-21
 
 - Migrated signed-in checkout to Constance's authenticated `plan_code` and

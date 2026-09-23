@@ -1,5 +1,5 @@
 import { Notice, PluginSettingTab, Setting } from "obsidian";
-import { isPlaceholderPriceId, MICA_PACKS, MICA_PRICE_IDS, openCheckout, syncPurchasedConversions } from "./billing";
+import { isPlaceholderPriceId, MICA_PACKS, MICA_PRICE_IDS, openCheckout } from "./billing";
 import type MicaPlugin from "./main";
 import { addBillingAccountSettings } from "./constance-account";
 
@@ -18,8 +18,8 @@ export class MicaSettingTab extends PluginSettingTab {
 
     new Setting(containerEl).setName("Billing").setHeading();
     containerEl.createEl("p", { text: `${this.plugin.settings.freeConversionsRemaining} of 3 free successful conversions remain today. Purchased balance: ${this.plugin.settings.purchasedConversions.toLocaleString()} conversion(s).` });
-    addBillingAccountSettings(containerEl, { state: this.plugin.settings, appId: "mica-webp-optimizer", installationId: this.plugin.settings.constanceDeviceId, appVersion: this.plugin.manifest.version, persist: () => this.plugin.saveSettings(), syncBalance: () => syncPurchasedConversions(this.plugin), refresh: () => this.display() });
-    new Setting(containerEl).setName("Purchased balance").setDesc("Refreshes the balance associated with this Obsidian install. Scans, previews, skips, and rollback never use credits.").addButton((button) => button.setButtonText("Refresh balance").onClick(async () => { await syncPurchasedConversions(this.plugin); new Notice("Mica: purchased balance refreshed."); this.display(); }));
+    addBillingAccountSettings(containerEl, { state: this.plugin.settings, appId: "mica-webp-optimizer", installationId: this.plugin.settings.constanceDeviceId, appVersion: this.plugin.manifest.version, persist: () => this.plugin.saveSettings(), syncBalance: () => this.plugin.reconcileBilling(), refresh: () => this.display() });
+    new Setting(containerEl).setName("Purchased balance").setDesc("Refreshes the balance associated with this Obsidian install and retries pending credit spends. Scans, previews, skips, and rollback never use credits.").addButton((button) => button.setButtonText("Refresh balance").onClick(async () => { await this.plugin.reconcileBilling(); new Notice("Mica: balance check complete."); this.display(); }));
     for (const pack of MICA_PACKS) {
       const priceId = MICA_PRICE_IDS[pack.key];
       new Setting(containerEl).setName(`$${pack.dollars} conversion pack`).setDesc(`${pack.conversions.toLocaleString()} successfully written WebP conversions · one-time purchase · return here and refresh balance after payment`).addButton((button) => button.setButtonText(`Buy $${pack.dollars}`).setDisabled(isPlaceholderPriceId(priceId)).onClick(() => void openCheckout(this.plugin, pack.key)));
