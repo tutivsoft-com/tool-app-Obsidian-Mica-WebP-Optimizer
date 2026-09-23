@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.12 - 2026-09-24
+
+- Added current feature, architecture, requirements, and marketing documentation.
+- Clarified benefit claims and synchronized release metadata; runtime behavior is unchanged from 3.4.11.
+
 ## 3.4.11 - 2026-09-23
 
 - Process eligible images that arrive while another conversion batch is running.
@@ -21,6 +26,11 @@
 
 - Incremented release metadata without rebuilding the plugin.
 
+## 3.4.8 - 2026-09-21
+
+- Incremented the release version and synchronized the source-inclusive public artifact.
+- Verified build, tests, syntax, and release metadata before publication.
+
 ## 3.4.5 - 2026-09-20
 
 - Prepared the next patch version across source, publish, and public metadata.
@@ -36,11 +46,6 @@
 - Incremented and synchronized the canonical, package, manifest, and publish version surfaces after the billing rollout. No runtime behavior changed in this metadata release.
 - Persisted credit-spend attempts before remote work and reused the same event
   ID when a response is lost or a request is retried.
-
-## 3.4.8 - 2026-09-21
-
-- Incremented the release version and synchronized the source-inclusive public artifact.
-- Verified build, tests, syntax, and release metadata before publication.
 
 ## 3.4.2 — 2026-09-11
 

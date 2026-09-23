@@ -1,6 +1,6 @@
 # Mica WebP Optimizer — Product Requirements
 
-Status: implemented — 3.4.5 live-catalog release
+Status: implemented — 3.4.12; this documentation release leaves the 3.4.11 runtime behavior unchanged.
 
 ## Product promise
 

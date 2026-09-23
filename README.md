@@ -1,6 +1,6 @@
 # Mica WebP Optimizer
 
-Version: `3.4.11`
+Version: `3.4.12`
 
 
 Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images to verified WebP files while protecting note links and original media.
@@ -40,12 +40,12 @@ If a paid spend response is lost after a WebP is verified, Mica keeps the conver
 
 ## Commands
 
-- `Mica: Scan current folder and optimize`
-- `Mica: Scan complete vault and optimize`
-- `Mica: Cancel active optimization`
-- `Mica: Pause or resume optimization`
-- `Mica: Rollback most recent optimization batch`
-- `Mica: View conversion log`
+- `Mica WebP Optimizer: Scan current folder and optimize`
+- `Mica WebP Optimizer: Scan complete vault and optimize`
+- `Mica WebP Optimizer: Cancel active optimization`
+- `Mica WebP Optimizer: Pause or resume optimization`
+- `Mica WebP Optimizer: Rollback most recent optimization batch`
+- `Mica WebP Optimizer: View conversion log`
 
 The image ribbon button and file/folder context menus provide the same workflows.
 
