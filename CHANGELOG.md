@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.18 (2026-09-25)
+
+- Synchronized the release version across release metadata and current product documentation; plugin behavior is unchanged.
+
 ## 3.4.16 (2026-09-24)
 
 - Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
