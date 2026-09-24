@@ -27,6 +27,7 @@ export interface MicaSettings {
   concurrency: number;
   autoOptimize: boolean;
   showLargerFilePrompt: boolean;
+  reviewBeforeApply: boolean;
   log: ConversionLogEntry[];
   lastBatch: BatchJournal | null;
 }

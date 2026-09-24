@@ -24,7 +24,8 @@ export const DEFAULT_SETTINGS: MicaSettings = {
   backupFolder: ".mica-backups",
   concurrency: 2,
   autoOptimize: true,
-  showLargerFilePrompt: true,
+  showLargerFilePrompt: false,
+  reviewBeforeApply: false,
   log: [],
   lastBatch: null
 };
@@ -61,7 +62,8 @@ export function normalizeSettings(raw: Partial<MicaSettings> | null | undefined)
     backupFolder: typeof value.backupFolder === "string" && value.backupFolder.trim() ? value.backupFolder.trim().replace(/^\/|\/$/g, "") : DEFAULT_SETTINGS.backupFolder,
     concurrency: Math.max(1, Math.min(4, Math.floor(Number(value.concurrency) || DEFAULT_SETTINGS.concurrency))),
     autoOptimize: value.autoOptimize !== false,
-    showLargerFilePrompt: value.showLargerFilePrompt !== false,
+    showLargerFilePrompt: value.showLargerFilePrompt === true,
+    reviewBeforeApply: value.reviewBeforeApply === true,
     log: Array.isArray(value.log) ? value.log.slice(-500) : [],
     lastBatch: value.lastBatch ?? null
   };

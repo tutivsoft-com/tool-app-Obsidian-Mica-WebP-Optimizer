@@ -9,7 +9,7 @@ Mica is an Obsidian client plugin. Image reads, encoding, WebP validation, vault
 ## Runtime flow
 
 1. `src/main.ts` registers commands, ribbon/context entry points, settings, automatic-import handling, and the conversion workflow.
-2. The scan and preview flow selects eligible images and presents scope, skips, and user choices before a batch starts.
+2. The scan selects eligible images and starts a batch directly unless optional scan review is enabled in Settings.
 3. `src/converter.ts` decodes source image data, encodes WebP using the host-provided image APIs, handles supported metadata chunks, and validates that the output can be decoded.
 4. Reference utilities find supported wikilink, Markdown, and HTML references and prepare only the matched path changes. Collision handling selects a stable free destination.
 5. The batch journal is persisted before note references or original-file locations are changed. Each file is processed independently and its result is added to the local conversion log.

@@ -40,7 +40,7 @@ Mica reduces image size inside an Obsidian vault while preserving embeds, visual
 16. Provide first-run defaults that require no tuning for ordinary pasted screenshots.
 17. Let the user configure watched folders, output location, quality, metadata policy, maximum dimensions, and original-file handling.
 18. Show an estimate of source count, likely size change, and files that will be skipped before a bulk run.
-19. Provide a preview for representative files and a clear confirmation for a bulk operation.
+19. Make bulk conversion one-click by default; expose optional scan review and larger-output prompts as Settings preferences.
 20. Show progress, current file, completed/failed/skipped counts, and Cancel.
 21. Resume safely after restart without converting the same source twice.
 22. Maintain a conversion log with source, output, size before/after, quality mode, and result.

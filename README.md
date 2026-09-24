@@ -8,7 +8,7 @@ Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images t
 ## MVP features
 
 - Watches newly created or imported PNG/JPEG images in the vault, using a background queue.
-- Scans the current folder or complete vault with a preview before bulk conversion.
+- Scans the current folder or complete vault and converts directly by default; optional review is configured in Settings.
 - Preserves dimensions by default, with an optional maximum longest edge.
 - Supports lossy quality and a near-lossless browser encoder mode.
 - Strips EXIF/device/location metadata by default; a visible setting can keep recognized metadata when the WebP container accepts it.
@@ -28,7 +28,7 @@ Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images t
 5. Originals remain available unless the user chooses the recoverable backup option.
 6. Billing, when needed, is checked only after the WebP has been written and verified; a failed check removes the staged output and restores note text.
 
-Automatic optimization is enabled with conservative defaults: quality 82, original files kept, metadata stripped, no resizing, and a maximum of two local encodes. The first bulk run always shows a review dialog.
+Automatic optimization is enabled with conservative defaults: quality 82, original files kept, metadata stripped, no resizing, and a maximum of two local encodes. Conversion runs directly by default; **Review before conversion** and **Ask when WebP is larger** are optional settings.
 
 ## Optional billing
 

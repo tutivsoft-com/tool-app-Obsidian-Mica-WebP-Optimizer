@@ -197,7 +197,9 @@ export default class MicaPlugin extends Plugin {
     summary.skipped.push(...collected.skippedAnimated.map((file) => ({ path: file.path, name: file.name, extension: file.extension, size: file.stat.size, reason: "Animated PNG" })));
     summary.skipped.push(...collected.skippedUnsupported.map((file) => ({ path: file.path, name: file.name, extension: file.extension, size: file.stat.size, reason: "Unsupported file type" })));
     if (!summary.candidates.length) { new Notice(`${PLUGIN_NAME}: no eligible PNG or JPEG images were found.`); return; }
-    new ConfirmScanModal(this.app, summary, () => void this.optimizeFiles(selected.filter((file) => summary.candidates.some((candidate) => candidate.path === file.path)))).open();
+    const eligible = selected.filter((file) => summary.candidates.some((candidate) => candidate.path === file.path));
+    if (this.settings.reviewBeforeApply) new ConfirmScanModal(this.app, summary, () => void this.optimizeFiles(eligible)).open();
+    else void this.optimizeFiles(eligible);
   }
 
   private updateProgress(patch: Partial<BatchProgress>): void {

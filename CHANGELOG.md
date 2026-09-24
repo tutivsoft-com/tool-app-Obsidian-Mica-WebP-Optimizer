@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.15
+
+- Made conversion review and larger-output prompts optional settings.
+
+
 ## 3.4.12 - 2026-09-24
 
 - Added current feature, architecture, requirements, and marketing documentation.

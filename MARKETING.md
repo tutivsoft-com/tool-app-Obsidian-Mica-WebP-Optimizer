@@ -15,7 +15,7 @@ Obsidian users whose vaults contain screenshots, diagrams, and photos, and who w
 ## Key reasons to choose Mica
 
 - Convert images in the active vault using the Obsidian host's local image APIs.
-- Review a folder or vault scan before applying a bulk conversion.
+- Apply folder or vault conversions directly, with optional scan review configured in Settings.
 - Preserve supported wikilink, Markdown, and HTML references, including their captions and aliases.
 - Keep originals by default, with an optional recoverable backup and rollback journal.
 - Strip recognized location/device metadata by default and see per-file outcomes in a local log.
