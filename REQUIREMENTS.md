@@ -89,3 +89,9 @@ AI is not needed. Image conversion, quality checks, link discovery, and safe rep
 - Bulk runs provide clear preview, progress, skip reasons, and recovery data.
 - The user can choose quality, original-file handling, and optional billing without navigating complex settings.
 - Image conversion and vault handling remain local with no AI account; account-linked allowance and paid-credit authorization require billing connectivity, while vault media is never uploaded.
+
+<!-- one-click-workflow:start -->
+## Workflow defaults (v3.4.16)
+
+Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
+<!-- one-click-workflow:end -->

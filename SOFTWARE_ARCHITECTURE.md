@@ -1,6 +1,6 @@
 # Mica WebP Optimizer — Software Architecture
 
-Version: 3.4.12
+Version: 3.4.16
 
 ## Runtime boundaries
 
@@ -36,3 +36,9 @@ Plugin settings, the local log, pending billing events, and the latest recovery 
 ## Quality checks
 
 The existing automated suite covers deterministic conversion, reference, billing-policy, and recovery logic. The release check is `npm run build`, `npm test`, `node --check publish/main.js`, version/manifest parity inspection, and `git diff --check`.
+
+<!-- one-click-workflow:start -->
+## Workflow defaults (v3.4.16)
+
+Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
+<!-- one-click-workflow:end -->

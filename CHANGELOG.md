@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.16 (2026-09-24)
+
+- Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
+
+
 ## 3.4.15
 
 - Made conversion review and larger-output prompts optional settings.

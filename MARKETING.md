@@ -1,6 +1,6 @@
 # Mica WebP Optimizer — Marketing
 
-Version: 3.4.12
+Version: 3.4.16
 
 ## Product positioning
 
@@ -35,3 +35,9 @@ Mica does not promise a fixed compression ratio or visual result. WebP size and 
 - `assets/Mica WebP Optimizer.mp4` — existing product demonstration.
 
 These assets are retained as supplied. Mica is distributed as an Obsidian Community plugin; Microsoft Store and Google Play listing artwork is not applicable.
+
+<!-- one-click-workflow:start -->
+## Workflow defaults (v3.4.16)
+
+Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
+<!-- one-click-workflow:end -->

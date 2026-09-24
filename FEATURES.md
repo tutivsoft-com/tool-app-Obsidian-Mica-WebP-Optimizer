@@ -1,6 +1,6 @@
 # Mica WebP Optimizer — Features
 
-Version: 3.4.12
+Version: 3.4.16
 
 Mica optimizes PNG and JPEG images in an Obsidian vault while keeping image references and originals recoverable.
 
@@ -33,3 +33,9 @@ Mica optimizes PNG and JPEG images in an Obsidian vault while keeping image refe
 - “Near-lossless” is the highest-quality mode exposed by that encoder, not a separate lossless codec.
 - Metadata retention is best effort for recognized chunks; stripping is the privacy-first default.
 - Rollback cannot recover a note deleted outside Mica after conversion. A generated WebP that has gained other references is retained rather than deleted.
+
+<!-- one-click-workflow:start -->
+## Workflow defaults (v3.4.16)
+
+Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
+<!-- one-click-workflow:end -->

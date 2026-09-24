@@ -12,3 +12,9 @@
 10. **Keep media private** — Conversion is local. Optional account/billing requests never include vault paths, note text, or image bytes.
 
 Mica does not promise a fixed size reduction; results depend on the image and the Obsidian host's encoder. Three successful verified conversions are free per local calendar day; paid credits are optional after that allowance.
+
+<!-- one-click-workflow:start -->
+## Workflow defaults (v3.4.16)
+
+Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
+<!-- one-click-workflow:end -->
