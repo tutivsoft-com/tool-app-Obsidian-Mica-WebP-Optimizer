@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.20 (2026-09-25)
+
+- Synchronized version metadata and the packaged runtime across the source and public release repositories.
+
+
 ## 3.4.19 (2026-09-25)
 
 - Added an opt-in vault scan at startup, disabled by default, and wait until Obsidian finishes loading before registering automatic image watchers.

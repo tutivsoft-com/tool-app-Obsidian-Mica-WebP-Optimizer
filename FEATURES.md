@@ -1,6 +1,6 @@
 # Mica WebP Optimizer — Features
 
-Version: 3.4.19
+Version: 3.4.20
 
 Mica optimizes PNG and JPEG images in an Obsidian vault while keeping image references and originals recoverable.
 
