@@ -25,6 +25,7 @@ export interface MicaSettings {
   originalHandling: OriginalHandling;
   backupFolder: string;
   concurrency: number;
+  autoConvertImagesAtStart: boolean;
   autoOptimize: boolean;
   showLargerFilePrompt: boolean;
   reviewBeforeApply: boolean;

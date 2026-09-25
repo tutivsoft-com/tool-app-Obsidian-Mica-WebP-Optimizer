@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.19 (2026-09-25)
+
+- Added an opt-in vault scan at startup, disabled by default, and wait until Obsidian finishes loading before registering automatic image watchers.
+- Stop a batch when billing denies conversion and show each billing notice at most once per batch.
+
 ## 3.4.18 (2026-09-25)
 
 - Synchronized the release version across release metadata and current product documentation; plugin behavior is unchanged.

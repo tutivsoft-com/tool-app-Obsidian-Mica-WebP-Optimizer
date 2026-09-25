@@ -25,6 +25,10 @@ export default class MicaPlugin extends Plugin {
   private processing = false;
   private cancelRequested = false;
   private paused = false;
+  private batchBillingStopped = false;
+  private batchBillingNotices = new Set<string>();
+  private noCreditsNoticeShown = false;
+  private autoOptimizationBlockedForCredits = false;
   private progressModal: ProgressModal | null = null;
   private progress: BatchProgress = { total: 0, completed: 0, converted: 0, skipped: 0, failed: 0, current: "", paused: false, cancelled: false };
   private noteLocks = new Map<string, Promise<void>>();
@@ -44,8 +48,11 @@ export default class MicaPlugin extends Plugin {
     this.addCommand({ id: "view-conversion-log", name: "View conversion log", callback: () => this.openLog() });
     this.addSettingTab(new MicaSettingTab(this.app, this));
     void this.reconcileBilling();
-    this.registerEvent(this.app.vault.on("create", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
-    this.registerEvent(this.app.vault.on("modify", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
+    this.app.workspace.onLayoutReady(() => {
+      if (this.settings.autoConvertImagesAtStart) void this.runScan(null);
+      this.registerEvent(this.app.vault.on("create", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
+      this.registerEvent(this.app.vault.on("modify", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
+    });
     this.registerEvent(this.app.workspace.on("file-menu", (menu, file) => { if (file instanceof TFile || file instanceof TFolder) this.addFileMenu(menu, file); }));
     this.registerEvent(this.app.workspace.on("editor-menu", (menu) => this.addEditorMenu(menu)));
   }
@@ -55,6 +62,10 @@ export default class MicaPlugin extends Plugin {
   async reconcileBilling(): Promise<void> {
     await syncPurchasedConversions(this);
     await retryPendingSpendEvents(this);
+    if (this.settings.freeConversionsRemaining > 0 || this.settings.purchasedConversions > 0) {
+      this.noCreditsNoticeShown = false;
+      this.autoOptimizationBlockedForCredits = false;
+    }
   }
   openLog(): void { new LogModal(this.app, this.settings.log).open(); }
 
@@ -68,15 +79,17 @@ export default class MicaPlugin extends Plugin {
     if (this.settings.freeAllowanceDate !== today) {
       this.settings.freeAllowanceDate = today;
       this.settings.freeConversionsRemaining = FREE_CONVERSIONS_PER_DAY;
+      this.noCreditsNoticeShown = false;
+      this.autoOptimizationBlockedForCredits = false;
     }
   }
 
   private async chargeConversion(): Promise<"verified" | "pending" | "denied"> {
     return withBillingLock(this, async () => {
+      if (this.batchBillingStopped) return "denied";
       this.ensureBillingState();
       if (!this.settings.billingAccessToken || !this.settings.billingAccountLinked) {
-        new Notice("Mica: sign in or create a billing account in plugin settings before converting.");
-        return "denied";
+        return this.stopBatchForBilling("billing-account", "Mica: sign in or create a billing account in plugin settings before converting. This batch has stopped.");
       }
       const pendingFreeUsage = this.settings.pendingFreeUsageEvents.find((item) => item.amount === 1) ?? { eventId: `free_${createBillingEventId()}`, amount: 1 };
       if (!this.settings.pendingFreeUsageEvents.some((item) => item.eventId === pendingFreeUsage.eventId)) {
@@ -96,18 +109,16 @@ export default class MicaPlugin extends Plugin {
         this.settings.billingAccessTokenExpiresAt = 0;
         this.settings.billingAccountLinked = false;
         await this.saveSettings();
-        new Notice("Mica: your billing session expired. Sign in again in plugin settings.");
-        return "denied";
+        return this.stopBatchForBilling("billing-session", "Mica: your billing session expired. Sign in again in plugin settings. This batch has stopped.");
       }
       if (free.kind === "error") {
-        new Notice("Mica: the account allowance could not be verified. Nothing was converted.");
-        return "denied";
+        return this.stopBatchForBilling("allowance-check", "Mica: the account allowance could not be verified. Nothing else in this batch will be converted.");
       }
       this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter((item) => item.eventId !== pendingFreeUsage.eventId);
+      this.settings.freeConversionsRemaining = 0;
       await this.saveSettings();
       if (this.settings.pendingSpendEvents.length > 0) {
-        new Notice("Mica: a previous credit spend is still being reconciled. Try again when the connection is restored.");
-        return "denied";
+        return this.stopBatchForBilling("spend-reconciliation", "Mica: a previous credit spend is still being reconciled. This batch has stopped; try again when the connection is restored.");
       }
       const result = await spendPurchasedConversion(this);
       if (result.kind === "ok") {
@@ -117,21 +128,40 @@ export default class MicaPlugin extends Plugin {
           return "verified";
         } catch (error) {
           console.error("Mica: purchased balance could not be saved after a successful spend", error);
-          new Notice("Mica: this conversion is saved, but the updated balance could not be stored. Reopen Mica to refresh it.");
+          this.notifyBillingOnce("balance-save", "Mica: this conversion is saved, but the updated balance could not be stored. Reopen Mica to refresh it.");
           return "pending";
         }
       }
       if (result.kind === "insufficient") {
-        new Notice("Mica: today’s free conversions are used and no purchased credits remain. Buy more in Settings.");
+        this.batchBillingStopped = true;
+        this.autoOptimizationBlockedForCredits = true;
+        this.queue = [];
+        this.queued.clear();
+        if (!this.noCreditsNoticeShown) {
+          this.noCreditsNoticeShown = true;
+          new Notice("Mica: today’s free conversions are used and no purchased credits remain. This batch has stopped; buy more in Settings.");
+        }
         return "denied";
       } else {
         // The server may have accepted this idempotent spend before the reply
         // was lost. Keep the verified image so a later reconciliation cannot
         // charge the account for an image we removed.
-        new Notice("Mica: this conversion is saved while its credit spend is being verified. Check your balance when connected.");
+        this.notifyBillingOnce("spend-pending", "Mica: this conversion is saved while its credit spend is being verified. Check your balance when connected.");
         return "pending";
       }
     });
+  }
+
+  private stopBatchForBilling(key: string, message: string): "denied" {
+    this.batchBillingStopped = true;
+    this.notifyBillingOnce(key, message);
+    return "denied";
+  }
+
+  private notifyBillingOnce(key: string, message: string): void {
+    if (this.batchBillingNotices.has(key)) return;
+    this.batchBillingNotices.add(key);
+    new Notice(message);
   }
 
   private addFileMenu(menu: Menu, file: TFile | TFolder): void {
@@ -145,6 +175,8 @@ export default class MicaPlugin extends Plugin {
   }
 
   private scheduleAutoOptimize(file: TFile): void {
+    this.ensureBillingState();
+    if (this.autoOptimizationBlockedForCredits) return;
     if (!this.settings.autoOptimize || !isSupportedPath(file.path) || !isWatched(file.path, this.settings) || this.isExcludedPath(file.path)) return;
     window.setTimeout(() => {
       if (!this.queued.has(file.path)) { this.queue.push(file); this.queued.add(file.path); }
@@ -210,6 +242,8 @@ export default class MicaPlugin extends Plugin {
   private async optimizeFiles(files: TFile[]): Promise<void> {
     if (this.processing) return;
     this.processing = true;
+    this.batchBillingStopped = false;
+    this.batchBillingNotices.clear();
     this.cancelRequested = false;
     this.paused = false;
     this.progress = { total: files.length, completed: 0, converted: 0, skipped: 0, failed: 0, current: "", paused: false, cancelled: false };
@@ -220,9 +254,9 @@ export default class MicaPlugin extends Plugin {
     await this.saveSettings();
     let nextIndex = 0;
     const worker = async (): Promise<void> => {
-      while (!this.cancelRequested) {
+      while (!this.cancelRequested && !this.batchBillingStopped) {
         await this.waitIfPaused();
-        if (this.cancelRequested) return;
+        if (this.cancelRequested || this.batchBillingStopped) return;
         const index = nextIndex++;
         if (index >= files.length) return;
         const file = files[index];
@@ -246,9 +280,9 @@ export default class MicaPlugin extends Plugin {
     this.processing = false;
     this.progressModal?.close();
     this.progressModal = null;
-    new Notice(`${PLUGIN_NAME}: ${cancelled ? "cancelled" : "batch complete"} — ${this.progress.converted} converted, ${this.progress.skipped} skipped, ${this.progress.failed} failed.`);
+    if (!this.batchBillingStopped) new Notice(`${PLUGIN_NAME}: ${cancelled ? "cancelled" : "batch complete"} — ${this.progress.converted} converted, ${this.progress.skipped} skipped, ${this.progress.failed} failed.`);
     // Events received during a batch remain queued until the active worker exits.
-    if (this.queue.length > 0 && !cancelled) void this.drainQueue();
+    if (this.queue.length > 0 && !cancelled && !this.batchBillingStopped) void this.drainQueue();
   }
 
   private async waitIfPaused(): Promise<void> { while (this.paused && !this.cancelRequested) await new Promise<void>((resolve) => window.setTimeout(resolve, 100)); }

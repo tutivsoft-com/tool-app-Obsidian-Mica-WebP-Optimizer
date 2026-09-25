@@ -1,6 +1,6 @@
 # Mica WebP Optimizer
 
-Version: `3.4.16`
+Version: `3.4.19`
 
 
 Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images to verified WebP files while protecting note links and original media.
@@ -28,7 +28,7 @@ Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images t
 5. Originals remain available unless the user chooses the recoverable backup option.
 6. Billing, when needed, is checked only after the WebP has been written and verified; a failed check removes the staged output and restores note text.
 
-Automatic optimization is enabled with conservative defaults: quality 82, original files kept, metadata stripped, no resizing, and a maximum of two local encodes. Conversion runs directly by default; **Review before conversion** and **Ask when WebP is larger** are optional settings.
+Automatic conversion of the vault at startup is disabled by default. Enable **Automatically Convert images at Start** to scan after Obsidian finishes loading. Automatic optimization of newly created or imported images remains a separate setting. Other defaults are quality 82, original files kept, metadata stripped, no resizing, and a maximum of two local encodes. A batch stops with one notice when billing denies further conversions.
 
 ## Optional billing
 
@@ -68,7 +68,7 @@ The WebP encoder is the browser/Electron encoder exposed by Obsidian. Near-lossl
 MIT. See [LICENSE](LICENSE) and [PRIVACY.md](PRIVACY.md).
 
 <!-- one-click-workflow:start -->
-## Workflow defaults (v3.4.16)
+## Workflow defaults (v3.4.19)
 
-Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
+The startup scan is off by default. Enable **Automatically Convert images at Start** to scan the vault after it opens. If the free allowance and purchased credits are exhausted, Mica stops the batch and shows one notice instead of repeating it for each image.
 <!-- one-click-workflow:end -->
