@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.4.23 (2026-09-26)
+
+- Aligns the published version metadata and user guide with the validated 3.4.22 source state; no runtime code changes are introduced in this version bump.
+
+## 3.4.22 (2026-09-25)
+
+- Updated app version metadata.
+
+## 3.4.21 (2026-09-25)
+
+- Added privacy-safe, copyable session diagnostics in settings and the command palette, with command and runtime error logging.
+
 ## 3.4.20 (2026-09-25)
 
 - Synchronized version metadata and the packaged runtime across the source and public release repositories.

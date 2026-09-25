@@ -1,6 +1,6 @@
 # Mica WebP Optimizer
 
-Version: `3.4.20`
+Version: `3.4.23`
 
 
 Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images to verified WebP files while protecting note links and original media.
@@ -49,15 +49,9 @@ If a paid spend response is lost after a WebP is verified, Mica keeps the conver
 
 The image ribbon button and file/folder context menus provide the same workflows.
 
-## Development
+## Source and development
 
-```text
-npm install
-npm run build
-npm test
-```
-
-The root `src/` tree is the development source of truth. `publish/` is synchronized during the build and contains the self-contained release bundle, mirrored source, manifest, README, license, and styles.
+The full implementation and build setup are maintained in the private main repository. This public repository contains the runtime release files and the limited `src/` closure needed for Obsidian Community review; it is not a full mirror of the development checkout.
 
 ## Limitations
 

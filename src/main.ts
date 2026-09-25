@@ -40,11 +40,11 @@ export default class MicaPlugin extends Plugin {
     this.ensureBillingState();
     await this.saveSettings();
     this.addRibbonIcon("image", "Mica: optimize images", () => void this.runFolderPicker());
-    this.addCommand({ id: "scan-current-folder", name: "Scan current folder and optimize", callback: () => void this.runCurrentFolder() });
-    this.addCommand({ id: "scan-complete-vault", name: "Scan complete vault and optimize", callback: () => void this.runScan(null) });
+    this.addCommand({ id: "scan-current-folder", name: "Scan current folder and optimize", callback: () => this.runCurrentFolder() });
+    this.addCommand({ id: "scan-complete-vault", name: "Scan complete vault and optimize", callback: () => this.runScan(null) });
     this.addCommand({ id: "cancel-optimization", name: "Cancel active optimization", callback: () => this.cancel() });
     this.addCommand({ id: "pause-optimization", name: "Pause or resume optimization", callback: () => this.togglePause() });
-    this.addCommand({ id: "rollback-last-batch", name: "Rollback most recent optimization batch", callback: () => void this.rollbackLastBatch() });
+    this.addCommand({ id: "rollback-last-batch", name: "Rollback most recent optimization batch", callback: () => this.rollbackLastBatch() });
     this.addCommand({ id: "view-conversion-log", name: "View conversion log", callback: () => this.openLog() });
     this.addSettingTab(new MicaSettingTab(this.app, this));
     void this.reconcileBilling();

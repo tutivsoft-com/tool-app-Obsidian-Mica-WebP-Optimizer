@@ -9,6 +9,7 @@ export class MicaSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+    this.plugin.support.addDiagnosticsSetting(containerEl);
     containerEl.createEl("h2", { text: "Mica WebP Optimizer" });
     containerEl.createEl("p", { text: "Mica converts PNG and JPEG images locally. It writes and verifies the WebP before changing a note, and it never deletes originals automatically." });
 
