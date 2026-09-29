@@ -59,7 +59,7 @@ async function authenticate(
   email: string,
   password: string,
   installationId: string,
-): Promise<AccountTokens> {
+): Promise<AccountTokens | { verificationRequired: true }> {
   const body = mode === "register"
     ? { email, password, external_customer_id: installationId }
     : { email, password };
@@ -73,6 +73,7 @@ async function authenticate(
   if (response.status < 200 || response.status >= 300) {
     throw new Error(errorDetail(response, `Billing ${mode} failed (HTTP ${response.status})`));
   }
+  if (response.json?.verification_required === true) return { verificationRequired: true };
   return accountTokens(response);
 }
 
@@ -105,6 +106,13 @@ export async function signInBillingAccount(
   if (password.length < 8) throw new Error("Password must contain at least 8 characters.");
   if (!adapter.installationId) throw new Error("The plugin installation ID is not ready.");
   const tokens = await authenticate(mode, email, password, adapter.installationId);
+  if ("verificationRequired" in tokens) {
+    clearBillingSession(adapter.state);
+    adapter.state.billingEmail = email;
+    adapter.state.billingRegistrationPending = true;
+    await adapter.persist();
+    return;
+  }
   await linkInstallation(adapter, tokens.accessToken);
   adapter.state.billingEmail = email;
   adapter.state.billingAccessToken = tokens.accessToken;
@@ -280,7 +288,7 @@ export function addBillingAccountSettings(containerEl: HTMLElement, adapter: Con
   new Setting(section)
     .setName("Email")
     .setDesc("Used to register, sign in, restore purchases, and open checkout.")
-    .addText((text) => text.setPlaceholder("you@example.com").setValue(adapter.state.billingEmail).onChange(async (value) => {
+    .addText((text) => text.setPlaceholder("you@example.com").setValue(adapter.state.billingEmail).setDisabled(adapter.state.billingAccountLinked).onChange(async (value) => {
       adapter.state.billingEmail = value.trim();
       await adapter.persist();
     }));
@@ -298,7 +306,9 @@ export function addBillingAccountSettings(containerEl: HTMLElement, adapter: Con
       button.setDisabled(true);
       try {
         await signInBillingAccount(adapter, password, "register");
-        new Notice("Registered and signed in.");
+        new Notice(adapter.state.billingRegistrationPending
+          ? "Check your email, click the confirmation link, then sign in here."
+          : "Registered and signed in.");
         adapter.refresh?.();
       } catch (error) {
         new Notice(error instanceof Error ? error.message : "Registration failed.");
@@ -319,13 +329,18 @@ export function addBillingAccountSettings(containerEl: HTMLElement, adapter: Con
         button.setDisabled(false);
       }
     }))
-    .addButton((button) => button.setButtonText("Sign out").setDisabled(!adapter.state.billingAccessToken).onClick(async () => {
-      adapter.state.billingAccessToken = "";
-      adapter.state.billingAccountLinked = false;
+    .addButton((button) => button.setButtonText("Sign out").setDisabled(!adapter.state.billingAccessToken && !adapter.state.billingRefreshToken).onClick(async () => {
+      await signOutBillingAccount(adapter);
       state.billingRegistrationPending = false;
-      await adapter.persist();
       new Notice("Signed out.");
       adapter.refresh?.();
+    }));
+
+  new Setting(section)
+    .setName("Forgot password?")
+    .setDesc("Reset your billing account password on Constance.")
+    .addButton((button) => button.setButtonText("Reset password").onClick(() => {
+      window.open(`${CONSTANCE_ACCOUNT_BASE_URL}/password-reset`, "_blank");
     }));
 
   const firstHeading = containerEl.querySelector(":scope > h1, :scope > h2");

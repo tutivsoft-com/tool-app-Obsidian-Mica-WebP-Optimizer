@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.30 — Billing account session and recovery
+
+- Registration with required email verification now remains pending until the confirmation link is used; no installation is linked early.
+- Sign out revokes and clears the refresh session, and the account email cannot be edited while signed in.
+- Added a visible central password-reset link in account settings.
+
 
 ## 3.4.28 — Account and credit clarity
 
