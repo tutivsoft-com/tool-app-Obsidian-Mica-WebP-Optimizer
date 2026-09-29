@@ -1,6 +1,6 @@
 # Mica WebP Optimizer
 
-Version: `3.4.23`
+Version: `3.4.28`
 
 
 Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images to verified WebP files while protecting note links and original media.
@@ -49,10 +49,6 @@ If a paid spend response is lost after a WebP is verified, Mica keeps the conver
 
 The image ribbon button and file/folder context menus provide the same workflows.
 
-## Source and development
-
-The full implementation and build setup are maintained in the private main repository. This public repository contains the runtime release files and the limited `src/` closure needed for Obsidian Community review; it is not a full mirror of the development checkout.
-
 ## Limitations
 
 The WebP encoder is the browser/Electron encoder exposed by Obsidian. Near-lossless is therefore a highest-quality fallback rather than a separate lossless codec. Metadata preservation is best effort (recognized EXIF and compatible JPEG ICC/XMP chunks) and is reported in the conversion log; privacy-first stripping is deterministic. Rollback cannot restore a note that was deleted outside Mica after the batch, and generated WebP files with new external references are retained rather than deleted.
@@ -66,3 +62,9 @@ MIT. See [LICENSE](LICENSE) and [PRIVACY.md](PRIVACY.md).
 
 The startup scan is off by default. Enable **Automatically Convert images at Start** to scan the vault after it opens. If the free allowance and purchased credits are exhausted, Mica stops the batch and shows one notice instead of repeating it for each image.
 <!-- one-click-workflow:end -->
+
+## Account, billing, and credit feedback
+
+Account and billing controls appear at the top of settings. Register with an email and password, confirm the link sent by email, then return and sign in. The settings page shows the current balance and provides balance refresh, sign-out, and purchase controls. Metered actions show the available balance and report the amount used with the remaining balance when the action completes.
+
+Current version: 3.4.28.

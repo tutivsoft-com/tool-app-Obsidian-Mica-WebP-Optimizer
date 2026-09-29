@@ -1,5 +1,13 @@
 # Changelog
 
+
+## 3.4.28 — Account and credit clarity
+
+- Moved account and billing controls to the top of settings.
+- Simplified account controls to email, password, Register, Sign in, Sign out, balance refresh, and purchase buttons.
+- Registration now explains that the user must confirm the email link and then sign in.
+- Credit balances stay visible, and metered work reports usage and the remaining balance.
+
 ## 3.4.23 (2026-09-26)
 
 - Aligns the published version metadata and user guide with the validated 3.4.22 source state; no runtime code changes are introduced in this version bump.
