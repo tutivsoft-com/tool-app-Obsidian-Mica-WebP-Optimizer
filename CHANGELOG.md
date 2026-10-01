@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.32 (2026-10-02)
+
+- Show current one-time offers from Constance provider prices, joined to each app's native billing units by exact price ID; submit checkout with that ID and preserve pending checkout recovery.
+
+
 ## 3.4.30 — Billing account session and recovery
 
 - Registration with required email verification now remains pending until the confirmation link is used; no installation is linked early.

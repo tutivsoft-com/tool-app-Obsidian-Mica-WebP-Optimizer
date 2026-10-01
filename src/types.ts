@@ -4,6 +4,7 @@ export type OriginalHandling = "keep" | "backup" | "review";
 export type MicaPack = "usd_001" | "usd_010";
 
 export interface MicaSettings {
+  settingsMode: "simple" | "advanced";
   constanceDeviceId: string;
   billingEmail: string;
   billingAccessToken: string;
@@ -14,7 +15,7 @@ export interface MicaSettings {
   freeAllowanceDate: string;
   purchasedConversions: number;
   pendingSpendEvents: Array<{ eventId: string; amount: number }>;
-  pendingFreeUsageEvents: Array<{ eventId: string; amount: number }>;
+  pendingFreeUsageEvents: Array<{ eventId: string; amount: number; outputCommitted?: boolean }>;
   pendingCheckout: { eventId: string; pack: MicaPack } | null;
   watchedFolders: string[];
   outputFolder: string;
@@ -27,6 +28,7 @@ export interface MicaSettings {
   concurrency: number;
   autoConvertImagesAtStart: boolean;
   autoOptimize: boolean;
+  automaticConsumptionApproved?: boolean;
   showLargerFilePrompt: boolean;
   reviewBeforeApply: boolean;
   log: ConversionLogEntry[];
