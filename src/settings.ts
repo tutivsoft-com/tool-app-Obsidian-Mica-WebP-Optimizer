@@ -2,6 +2,7 @@ import type { MicaSettings } from "./types";
 import { FREE_CONVERSIONS_PER_DAY } from "./billing-policy";
 
 export const DEFAULT_SETTINGS: MicaSettings = {
+  settingsMode: "simple",
   constanceDeviceId: "",
   billingEmail: "",
   billingAccessToken: "",
@@ -24,7 +25,7 @@ export const DEFAULT_SETTINGS: MicaSettings = {
   backupFolder: ".mica-backups",
   concurrency: 2,
   autoConvertImagesAtStart: false,
-  autoOptimize: true,
+  autoOptimize: false,
   showLargerFilePrompt: false,
   reviewBeforeApply: false,
   log: [],
@@ -41,6 +42,7 @@ export function normalizeSettings(raw: Partial<MicaSettings> | null | undefined)
     : null;
   return {
     ...value,
+    settingsMode: value.settingsMode === "advanced" ? "advanced" : "simple",
     constanceDeviceId: typeof value.constanceDeviceId === "string" ? value.constanceDeviceId : "",
     billingEmail: typeof value.billingEmail === "string" ? value.billingEmail : "",
     billingAccessToken: typeof value.billingAccessToken === "string" ? value.billingAccessToken : "",
@@ -62,8 +64,9 @@ export function normalizeSettings(raw: Partial<MicaSettings> | null | undefined)
     originalHandling: value.originalHandling === "backup" || value.originalHandling === "review" ? value.originalHandling : "keep",
     backupFolder: typeof value.backupFolder === "string" && value.backupFolder.trim() ? value.backupFolder.trim().replace(/^\/|\/$/g, "") : DEFAULT_SETTINGS.backupFolder,
     concurrency: Math.max(1, Math.min(4, Math.floor(Number(value.concurrency) || DEFAULT_SETTINGS.concurrency))),
-    autoConvertImagesAtStart: value.autoConvertImagesAtStart === true,
-    autoOptimize: value.autoOptimize !== false,
+
+    autoOptimize: value.automaticConsumptionApproved === true && value.autoOptimize === true,
+    autoConvertImagesAtStart: value.automaticConsumptionApproved === true && value.autoConvertImagesAtStart === true,
     showLargerFilePrompt: value.showLargerFilePrompt === true,
     reviewBeforeApply: value.reviewBeforeApply === true,
     log: Array.isArray(value.log) ? value.log.slice(-500) : [],
