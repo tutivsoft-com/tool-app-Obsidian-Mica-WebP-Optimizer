@@ -1,6 +1,8 @@
+import { Modal } from "obsidian";
 import { Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
 import { retryPendingSpendEvents, spendPurchasedConversion, syncPurchasedConversions, withBillingLock } from "./billing";
 import { createBillingEventId, FREE_CONVERSIONS_PER_DAY, localCalendarDate } from "./billing-policy";
+import { reserveNative, renderNativePacks, jobId, digest, recoverNative } from "./native-operations";
 import { claimAccountFreeUsage } from "./constance-account";
 import { convertToWebp } from "./converter";
 import { ConfirmScanModal, FolderPickerModal, LargerFileModal, LogModal, ProgressModal } from "./modals";
@@ -20,6 +22,7 @@ const makeId = (): string => {
 export default class MicaPlugin extends Plugin {
   declare settings: MicaSettings;
   support!: PluginSupport;
+  billingSummaryRefresh?: () => void;
   private queue: TFile[] = [];
   private queued = new Set<string>();
   private processing = false;
@@ -49,7 +52,7 @@ export default class MicaPlugin extends Plugin {
     this.addSettingTab(new MicaSettingTab(this.app, this));
     void this.reconcileBilling();
     this.app.workspace.onLayoutReady(() => {
-      if (this.settings.autoConvertImagesAtStart) void this.runScan(null);
+      if (this.settings.automaticConsumptionApproved && this.settings.billingAccountLinked && this.settings.autoConvertImagesAtStart) void this.runScan(null);
       this.registerEvent(this.app.vault.on("create", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
       this.registerEvent(this.app.vault.on("modify", (file) => { if (file instanceof TFile) this.scheduleAutoOptimize(file); }));
     });
@@ -59,9 +62,13 @@ export default class MicaPlugin extends Plugin {
 
   onunload(): void { this.cancelRequested = true; this.progressModal?.close(); }
   async saveSettings(): Promise<void> { await this.saveData(this.settings); }
-  async reconcileBilling(): Promise<void> {
-    await syncPurchasedConversions(this);
+  refreshBillingSummary(): void { this.billingSummaryRefresh?.(); }
+  async reconcileBilling(strict = false): Promise<void> {
+    await recoverNative({app:this.app,settings:this.settings,persistNative:()=>this.saveSettings()});
+    await syncPurchasedConversions(this, strict);
     await retryPendingSpendEvents(this);
+    await withBillingLock(this, () => this.reconcileCommittedFreeUsage());
+    this.refreshBillingSummary();
     if (this.settings.freeConversionsRemaining > 0 || this.settings.purchasedConversions > 0) {
       this.noCreditsNoticeShown = false;
       this.autoOptimizationBlockedForCredits = false;
@@ -78,55 +85,94 @@ export default class MicaPlugin extends Plugin {
     const today = localCalendarDate();
     if (this.settings.freeAllowanceDate !== today) {
       this.settings.freeAllowanceDate = today;
-      this.settings.freeConversionsRemaining = FREE_CONVERSIONS_PER_DAY;
+      // Server-owned lifetime allowance never resets at UTC rollover.
       this.noCreditsNoticeShown = false;
       this.autoOptimizationBlockedForCredits = false;
     }
   }
 
+  private async reconcileCommittedFreeUsage(): Promise<boolean> {
+    for (const pending of [...this.settings.pendingFreeUsageEvents].filter(item => item.outputCommitted)) {
+      const result = await claimAccountFreeUsage(this.settings, "mica-webp-optimizer", this.settings.constanceDeviceId, pending.eventId, pending.amount, () => this.saveSettings());
+      if (result.kind === "error" || result.kind === "auth-required") return false;
+      if (result.kind === "insufficient") {
+        const paid = await spendPurchasedConversion(this, pending.eventId);
+        if (paid.kind !== "ok") return false;
+        this.settings.purchasedConversions = paid.balance;
+      } else this.settings.freeConversionsRemaining = result.remaining;
+      this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter(item => item.eventId !== pending.eventId);
+      try { await this.saveSettings(); }
+      catch { this.settings.pendingFreeUsageEvents.push(pending); return false; }
+    }
+    return true;
+  }
+
   private async chargeConversion(): Promise<"verified" | "pending" | "denied"> {
     return withBillingLock(this, async () => {
       if (this.batchBillingStopped) return "denied";
+      if (!(await this.reconcileCommittedFreeUsage()) || this.settings.pendingSpendEvents.length > 0) {
+        return this.stopBatchForBilling("usage-recovery", "Mica: a saved conversion is awaiting billing confirmation. Reconnect or refresh balance before converting more images.");
+      }
       this.ensureBillingState();
       if (!this.settings.billingAccessToken || !this.settings.billingAccountLinked) {
         return this.stopBatchForBilling("billing-account", "Mica: sign in or create a billing account in plugin settings before converting. This batch has stopped.");
       }
-      const pendingFreeUsage = this.settings.pendingFreeUsageEvents.find((item) => item.amount === 1) ?? { eventId: `free_${createBillingEventId()}`, amount: 1 };
+      const pendingFreeUsage = this.settings.pendingFreeUsageEvents.find((item) => item.amount === 1) ?? { eventId: `free_${createBillingEventId()}`, amount: 1, outputCommitted: true };
+      pendingFreeUsage.outputCommitted = true;
       if (!this.settings.pendingFreeUsageEvents.some((item) => item.eventId === pendingFreeUsage.eventId)) {
         this.settings.pendingFreeUsageEvents = [...this.settings.pendingFreeUsageEvents, pendingFreeUsage];
-        await this.saveSettings();
+      }
+      try { await this.saveSettings(); }
+      catch (error) {
+        this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter(item => item.eventId !== pendingFreeUsage.eventId);
+        throw error;
       }
       const free = await claimAccountFreeUsage(this.settings, "mica-webp-optimizer", this.settings.constanceDeviceId, pendingFreeUsage.eventId, pendingFreeUsage.amount, () => this.saveSettings());
       if (free.kind === "ok") {
         this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter((item) => item.eventId !== pendingFreeUsage.eventId);
         this.settings.freeConversionsRemaining = free.remaining;
-        await this.saveSettings();
-        return "verified";
+        try { await this.saveSettings(); return "verified"; }
+        catch {
+          this.settings.pendingFreeUsageEvents.push(pendingFreeUsage);
+          this.batchBillingStopped = true;
+          this.notifyBillingOnce("free-receipt", "Mica: this conversion is saved. Refresh balance to finish saving its billing receipt.");
+          return "pending";
+        }
       }
       if (free.kind === "auth-required") {
         this.settings.billingAccessToken = "";
         this.settings.billingRefreshToken = "";
         this.settings.billingAccessTokenExpiresAt = 0;
         this.settings.billingAccountLinked = false;
-        await this.saveSettings();
-        return this.stopBatchForBilling("billing-session", "Mica: your billing session expired. Sign in again in plugin settings. This batch has stopped.");
+        try { await this.saveSettings(); } catch { /* The pre-claim journal remains durable. */ }
+        this.stopBatchForBilling("billing-session", "Mica: this conversion is saved. Connect again to confirm its allowance; this batch has stopped.");
+        return "pending";
       }
       if (free.kind === "error") {
-        return this.stopBatchForBilling("allowance-check", "Mica: the account allowance could not be verified. Nothing else in this batch will be converted.");
+        this.stopBatchForBilling("allowance-check", "Mica: this conversion is saved while its allowance is verified. Nothing else in this batch will be converted.");
+        return "pending";
       }
       this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter((item) => item.eventId !== pendingFreeUsage.eventId);
       this.settings.freeConversionsRemaining = 0;
-      await this.saveSettings();
+      try { await this.saveSettings(); }
+      catch {
+        this.settings.pendingFreeUsageEvents.push(pendingFreeUsage);
+        this.batchBillingStopped = true;
+        return "pending";
+      }
       if (this.settings.pendingSpendEvents.length > 0) {
         return this.stopBatchForBilling("spend-reconciliation", "Mica: a previous credit spend is still being reconciled. This batch has stopped; try again when the connection is restored.");
       }
-      const result = await spendPurchasedConversion(this);
+      const paidEventId = createBillingEventId();
+      const result = await spendPurchasedConversion(this, paidEventId);
       if (result.kind === "ok") {
         this.settings.purchasedConversions = result.balance;
         try {
           await this.saveSettings();
           return "verified";
         } catch (error) {
+          this.settings.pendingSpendEvents.push({ eventId: paidEventId, amount: 1 });
+          this.batchBillingStopped = true;
           console.error("Mica: purchased balance could not be saved after a successful spend", error);
           this.notifyBillingOnce("balance-save", "Mica: this conversion is saved, but the updated balance could not be stored. Reopen Mica to refresh it.");
           return "pending";
@@ -147,6 +193,7 @@ export default class MicaPlugin extends Plugin {
         // was lost. Keep the verified image so a later reconciliation cannot
         // charge the account for an image we removed.
         this.notifyBillingOnce("spend-pending", "Mica: this conversion is saved while its credit spend is being verified. Check your balance when connected.");
+        this.batchBillingStopped = true;
         return "pending";
       }
     });
@@ -177,7 +224,7 @@ export default class MicaPlugin extends Plugin {
   private scheduleAutoOptimize(file: TFile): void {
     this.ensureBillingState();
     if (this.autoOptimizationBlockedForCredits) return;
-    if (!this.settings.autoOptimize || !isSupportedPath(file.path) || !isWatched(file.path, this.settings) || this.isExcludedPath(file.path)) return;
+    if (!this.settings.automaticConsumptionApproved || !this.settings.billingAccountLinked || !this.settings.autoOptimize || !isSupportedPath(file.path) || !isWatched(file.path, this.settings) || this.isExcludedPath(file.path)) return;
     window.setTimeout(() => {
       if (!this.queued.has(file.path)) { this.queue.push(file); this.queued.add(file.path); }
       void this.drainQueue();
@@ -239,7 +286,23 @@ export default class MicaPlugin extends Plugin {
     this.progressModal?.update(this.progress);
   }
 
+  private preservedConversions=new Map<string,{eventId:string;sourceHash:string;conversion:Awaited<ReturnType<typeof convertToWebp>>}>();
+  private async guestConversionPreview(file:TFile):Promise<void>{
+    if(file.stat.size>5242880) {new Notice("Guest image previews are bounded to 5 MB. Select a smaller image.");return;}
+    const source=await this.app.vault.readBinary(file);
+    const sourceHash=await digest(source);
+    const conversion=await convertToWebp(source,file.extension,this.settings.quality,this.settings.qualityMode,this.settings.maxDimension,this.settings.metadataPolicy);
+    if(conversion.info.width*conversion.info.height>4000000){new Notice("Guest image preview is bounded to four megapixels.");return;}
+    this.preservedConversions.set(file.path,{eventId:jobId(),sourceHash,conversion});
+    const modal=new Modal(this.app);modal.titleEl.setText("Memory-only WebP preview");
+    modal.contentEl.createEl("p",{text:`${source.byteLength} bytes → ${conversion.bytes.byteLength} bytes. Keep this preview open through sign-in/verification, then apply these exact bytes without converting again. No image or journal has been saved.`});
+    const canvas=modal.contentEl.createEl("canvas");canvas.width=160;canvas.height=100;
+    const bitmap=await createImageBitmap(new Blob([conversion.bytes],{type:"image/webp"}));canvas.getContext("2d")?.drawImage(bitmap,0,0,160,100);bitmap.close();
+    const apply=modal.contentEl.createEl("button",{text:"Apply exact conversion after sign-in"});apply.onclick=()=>void this.optimizeFiles([file]);
+    modal.onClose=()=>{this.preservedConversions.delete(file.path);modal.contentEl.empty();};modal.open();
+  }
   private async optimizeFiles(files: TFile[]): Promise<void> {
+    if(!this.settings.billingAccessToken || !this.settings.billingAccountLinked){ if(files[0])await this.guestConversionPreview(files[0]);return;}
     if (this.processing) return;
     this.processing = true;
     this.batchBillingStopped = false;
@@ -289,6 +352,7 @@ export default class MicaPlugin extends Plugin {
   private togglePause(): void { if (!this.processing) return; this.paused = !this.paused; this.updateProgress({}); }
   private cancel(): void { if (!this.processing) { new Notice(`${PLUGIN_NAME}: no optimization is running.`); return; } this.cancelRequested = true; this.queue = []; this.queued.clear(); this.updateProgress({}); new Notice(`${PLUGIN_NAME}: cancellation requested; the current verified file will finish safely.`); }
 
+  private async commitNativeConversion(reservation:import("./native-operations").NativeReservation):Promise<"verified"|"pending"|"denied"> {return (await reservation.commit()).kind==="committed" ? "verified" : "pending";}
   private async optimizeOne(file: TFile, journal: BatchJournal): Promise<"converted" | "skipped"> {
     const sourceBytes = await this.app.vault.readBinary(file);
     const sourceHash = stableHash(sourceBytes);
@@ -297,7 +361,12 @@ export default class MicaPlugin extends Plugin {
       this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, output: previous.output, sourceBytes: file.stat.size, outputBytes: previous.outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "already-processed", reason: "Verified output already exists." });
       return "skipped";
     }
-    const conversion = await convertToWebp(sourceBytes, file.extension, this.settings.quality, this.settings.qualityMode, this.settings.maxDimension, this.settings.metadataPolicy);
+    const preserved=this.preservedConversions.get(file.path);
+    const verifiedSourceHash=await digest(sourceBytes);
+    if(preserved && preserved.sourceHash!==verifiedSourceHash)throw new Error("Image source changed. Original preview is retained; select a separately priced new run.");
+    const conversion = preserved?.conversion || await convertToWebp(sourceBytes, file.extension, this.settings.quality, this.settings.qualityMode, this.settings.maxDimension, this.settings.metadataPolicy);
+    const authorization=await reserveNative({app:this.app,settings:this.settings,persistNative:()=>this.saveSettings()},"mica-webp-optimizer",preserved?.eventId || jobId(),verifiedSourceHash,await digest(conversion.bytes),{bytes:sourceBytes.byteLength,pixels:conversion.info.width*conversion.info.height});
+    if(!authorization)return "skipped";
     const base = baseOutputPath(file.path, this.settings.outputFolder);
     const outputPath = uniqueOutputPath(base, this.app.vault.getFiles().map((item) => item.path));
     const outputBytes = conversion.bytes.byteLength;
@@ -310,6 +379,8 @@ export default class MicaPlugin extends Plugin {
         return "skipped";
       }
     }
+    if(await digest(await this.app.vault.readBinary(file))!==verifiedSourceHash)throw new Error("Image source changed before write. Original preview retained.");
+    if(!await authorization.markWriting([{path:outputPath,binary:true,after:await digest(conversion.bytes)}]))return "skipped";
     await this.ensureFolder(outputPath);
     await this.app.vault.createBinary(outputPath, conversion.bytes);
     try {
@@ -352,7 +423,7 @@ export default class MicaPlugin extends Plugin {
     }
     let billingResult: "verified" | "pending" | "denied" = "denied";
     try {
-      billingResult = await this.chargeConversion();
+      billingResult = await this.commitNativeConversion(authorization);
     } catch (error) {
       await this.restoreNoteChanges(changedNotes);
       this.removeJournalEntry(journal, journalEntry);

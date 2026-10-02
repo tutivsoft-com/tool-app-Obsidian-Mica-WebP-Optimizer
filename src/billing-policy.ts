@@ -1,4 +1,4 @@
-export const FREE_CONVERSIONS_PER_DAY = 3;
+export const FREE_CONVERSIONS_PER_DAY = 5;
 
 export function localCalendarDate(date = new Date()): string {
   const year = date.getFullYear();

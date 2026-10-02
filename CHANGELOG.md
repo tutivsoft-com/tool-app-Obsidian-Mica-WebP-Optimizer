@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.4.36 — Publication preparation
+
+- Correct public documentation and align release metadata; no runtime behavior changes.
+- Publication is pending. Local validation is recorded separately in the private release record.
+
+## 3.4.35 (2026-10-02)
+
+- Load current offers from Constance public-products, display its formatted prices and approved native-unit grants, and submit exact-price quantity-one checkouts with durable idempotency recovery.
+- Release documentation and metadata cleanup only; runtime behavior is unchanged from the included 3.4.33 source.
+
+## 3.4.33 (2026-10-02)
+
+- Load current offers from Constance public-products, display its formatted prices and approved native-unit grants, and submit exact-price quantity-one checkouts with durable idempotency recovery.
+
+
 ## 3.4.30 — Billing account session and recovery
 
 - Registration with required email verification now remains pending until the confirmation link is used; no installation is linked early.
