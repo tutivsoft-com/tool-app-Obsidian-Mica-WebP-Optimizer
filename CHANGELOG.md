@@ -1,4 +1,13 @@
+## 3.4.34 (2026-10-02)
+
+- Metadata-only private version preparation. Runtime source and generated bundles are unchanged; this version has not been built, tagged, submitted for Community review, or released.
+
 # Changelog
+
+## 3.4.33 (2026-10-02)
+
+- Load current offers from Constance public-products, display its formatted prices and approved native-unit grants, and submit exact-price quantity-one checkouts with durable idempotency recovery.
+
 
 ## 3.4.30 — Billing account session and recovery
 
