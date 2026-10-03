@@ -1,12 +1,11 @@
 # Mica WebP Optimizer
 
-Version: 3.4.36 — validated locally for publication; release pending.
+Version: 3.4.38 — release source.
 
 ## Current purchase behavior
 
 Purchase settings load the current public product catalog from Constance. Each available offer supplies its exact Paddle price ID, native-unit grant, unit name, and formatted amount. The client displays backend-provided amounts, enables only offers marked available, and submits the selected price ID through authenticated checkout with quantity one. Existing account balances and granted credits remain associated with the account.
 
-<!-- SETTINGS-CURRENT-2026-09-30 -->
 
 ## Preview and lifetime allowance
 
@@ -14,16 +13,14 @@ Guests see a bounded preview held only in memory. Keep the originating window op
 
 Constance authorizes metered operations using this app’s native billing unit. The plugin checks current account entitlements and live purchase availability through Constance; each operation follows its documented reserve/commit or quote/confirmation flow.
 
-One successful image conversion is one native unit; free image <=5 MB/four megapixels. Guest thumbnail and size estimate stay in memory; after sign-in the exact converted bytes are applied. Background/startup conversion requires explicit credit-consumption opt-in. Original images and rollback stay available.
+Each successful image conversion consumes one native unit. Guest previews accept images up to 5 MB and four megapixels; the thumbnail and size estimate stay in memory, and after sign-in the exact converted bytes are applied. Background/startup conversion requires explicit credit-consumption opt-in. Original images and rollback stay available.
 
-Useful local writes follow durable reserve -> write -> verify -> commit. Full reveal commits before showing complete content. Unknown writes retain their journal for status/output reconciliation; they are never blindly refunded or replayed. Billing sends account/install identity, native dimensions and source/result digests, never vault content, image bytes or encryption passwords.
+Useful local writes follow durable reserve -> write -> verify -> commit. Full reveal commits before showing complete content. Unknown writes retain their journal for status/output reconciliation; they are never blindly refunded or replayed. Billing sends account/install identity, native dimensions and source/result digests, never vault content or image bytes. Mica does not encrypt images or request an encryption password.
 
 ## Current settings
 
-Settings default to **Simple** and remember the selected mode. Simple contains everyday controls and account/billing. **Advanced** adds specialist preferences and diagnostics. Advanced settings provide specialist preferences and diagnostics. This plugin runs locally without a managed AI provider. Account and encryption passwords remain necessary.
-<!-- SETTINGS-CURRENT-2026-09-30:END -->
+Settings default to **Simple** and remember the selected mode. Simple contains everyday controls and account/billing. **Advanced** adds specialist preferences and diagnostics. Advanced settings provide specialist preferences and diagnostics. This plugin runs locally without a managed AI provider. A Constance account password is needed for account and billing features; Mica does not encrypt images or ask for an encryption password.
 
-<!-- BILLING-CURRENT-2026-09-30 -->
 ## Current local account and billing behavior
 
 Use **Connect** with your email and password. A new account is registered; an existing account is authenticated. New users must follow the emailed verification link and Connect again. Incorrect passwords offer password recovery; passwords are never saved. Paid purchases and free allowances belong to the authenticated account, not a locally entered email or an editable cached balance. Reinstalling does not replenish the same account's allowance.
@@ -32,7 +29,6 @@ Constance is the billing authority. Credit units remain app-specific: characters
 
 
 Constance provides authenticated account entitlements, usage balances, and available purchase offers.
-<!-- BILLING-CURRENT-2026-09-30:END -->
 
 
 Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images to verified WebP files while protecting note links and original media.
@@ -85,11 +81,9 @@ The WebP encoder is the browser/Electron encoder exposed by Obsidian. Near-lossl
 
 MIT. See [LICENSE](LICENSE) and [PRIVACY.md](PRIVACY.md).
 
-<!-- one-click-workflow:start -->
-## Workflow defaults (v3.4.36)
+## Workflow defaults (v3.4.38)
 
 The startup scan is off by default. Enable **Advanced → Convert existing images at startup** to scan the vault after it opens. If the free allowance and purchased credits are exhausted, Mica stops the batch and shows one notice instead of repeating it for each image.
-<!-- one-click-workflow:end -->
 
 ## Account, billing, and credit feedback
 

@@ -6,9 +6,9 @@ Guests see a bounded preview held only in memory. Keep the originating window op
 
 Current pack prices, quantities, and availability load from Constance. No image content is uploaded for billing.
 
-One successful image conversion is one native unit; free image <=5 MB/four megapixels. Guest thumbnail and size estimate stay in memory; after sign-in the exact converted bytes are applied. Background/startup conversion requires explicit credit-consumption opt-in. Original images and rollback stay available.
+Each successful image conversion consumes one native unit. Guest previews accept images up to 5 MB and four megapixels; the thumbnail and size estimate stay in memory, and after sign-in the exact converted bytes are applied. Background/startup conversion requires explicit credit-consumption opt-in. Original images and rollback stay available.
 
-Useful local writes follow durable reserve -> write -> verify -> commit. Full reveal commits before showing complete content. Unknown writes retain their journal for status/output reconciliation; they are never blindly refunded or replayed. Billing sends account/install identity, native dimensions and source/result digests, never vault content, image bytes or encryption passwords.
+Useful local writes follow durable reserve -> write -> verify -> commit. Full reveal commits before showing complete content. Unknown writes retain their journal for status/output reconciliation; they are never blindly refunded or replayed. Billing sends account/install identity, native dimensions and source/result digests, never vault content or image bytes. Mica does not encrypt images or request an encryption password.
 
 
 Mica performs image decoding, resizing, WebP encoding, reference discovery, and file writes locally inside the active Obsidian vault. It has no cloud conversion service, analytics, or AI integration. Billing authorizes useful completion, checkout and balance synchronization; local media is never uploaded.
@@ -16,7 +16,7 @@ Mica performs image decoding, resizing, WebP encoding, reference discovery, and 
 ## Data handling
 
 - Image bytes are read from the active vault and are not uploaded.
-- Authenticated billing requests contain the fixed Mica app identifier, a cryptographically random install identifier, and a bearer session; checkout sends server-owned plan codes and a durable idempotency key; an uncertain response never opens an alternative checkout. No vault paths, note contents, image bytes, or generated WebP bytes are sent.
+- Authenticated billing requests contain the fixed Mica app identifier, a cryptographically random install identifier, and a bearer session. New checkouts send the exact catalog price ID and a durable idempotency key; recovery of an older saved checkout can reuse its original plan-code selector. An uncertain response never opens an alternative checkout. No vault paths, note contents, image bytes, or generated WebP bytes are sent.
 - Settings, the conversion log, and the latest recovery journal are stored in Obsidian plugin data in the same local profile.
 - Metadata stripping is the default because EXIF can contain GPS coordinates, device identifiers, timestamps, and editing history.
 - The optional keep setting only preserves recognized EXIF and compatible ICC/XMP chunks when the local WebP container accepts them. Unrecognized metadata may be dropped.
@@ -28,8 +28,6 @@ Mica is designed to reduce accidental data loss and accidental metadata disclosu
 
 When a reference is ambiguous or a note cannot be safely updated, Mica leaves the original in place and reports a review result. During rollback, a generated output is deleted only when no remaining vault reference is found; otherwise it is retained.
 
-<!-- one-click-workflow:start -->
-## Workflow defaults (v3.4.36)
+## Workflow defaults (v3.4.38)
 
 Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
-<!-- one-click-workflow:end -->

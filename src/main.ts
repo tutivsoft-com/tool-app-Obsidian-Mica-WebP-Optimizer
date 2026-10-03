@@ -375,6 +375,9 @@ export default class MicaPlugin extends Plugin {
     if (outputIsLarger && this.settings.showLargerFilePrompt) {
       const keepWebp = await this.askKeepLarger(candidate, outputBytes);
       if (!keepWebp) {
+        // Release before returning; if the response is lost, the durable journal
+        // is reconciled by a later operation-status lookup before any new reserve.
+        await authorization.rollback();
         this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, sourceBytes: sourceBytes.byteLength, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "larger-kept-original", reason: "Original retained because WebP was larger." });
         return "skipped";
       }

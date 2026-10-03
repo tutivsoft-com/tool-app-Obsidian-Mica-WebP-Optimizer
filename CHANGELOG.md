@@ -1,9 +1,15 @@
 # Changelog
 
-## 3.4.36 — Publication preparation
+## 3.4.38 — Safer larger-file declines
 
-- Correct public documentation and align release metadata; no runtime behavior changes.
-- Publication is pending. Local validation is recorded separately in the private release record.
+- Release the native operation reservation when keeping the original after a larger WebP prompt.
+- Recover ambiguous release responses from the durable operation status before allowing a retry.
+- Clarify account-password and checkout price-ID disclosures.
+
+## 3.4.37 — Account session recovery (superseded candidate)
+
+- Preserve authenticated sessions when installation linking fails recoverably, and clear credentials rejected by the installation endpoint.
+- Historical preparation recorded a successful build, 47 tests, bundle syntax, and dependency audit. This candidate was superseded before publication.
 
 ## 3.4.35 (2026-10-02)
 
