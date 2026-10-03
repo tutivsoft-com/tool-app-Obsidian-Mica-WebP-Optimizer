@@ -28,8 +28,6 @@ Mica is designed to reduce accidental data loss and accidental metadata disclosu
 
 When a reference is ambiguous or a note cannot be safely updated, Mica leaves the original in place and reports a review result. During rollback, a generated output is deleted only when no remaining vault reference is found; otherwise it is retained.
 
-<!-- one-click-workflow:start -->
-## Workflow defaults (v3.4.36)
+## Workflow defaults (v3.4.37)
 
 Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
-<!-- one-click-workflow:end -->

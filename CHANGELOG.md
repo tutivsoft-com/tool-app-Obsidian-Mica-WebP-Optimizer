@@ -1,9 +1,9 @@
 # Changelog
 
-## 3.4.36 — Publication preparation
+## 3.4.37 — Account session recovery
 
-- Correct public documentation and align release metadata; no runtime behavior changes.
-- Publication is pending. Local validation is recorded separately in the private release record.
+- Preserve authenticated sessions when installation linking fails recoverably, and clear credentials rejected by the installation endpoint.
+- Build, 47 tests, bundle syntax, and dependency audit passed; validated for publication, Community release pending.
 
 ## 3.4.35 (2026-10-02)
 
