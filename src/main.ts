@@ -287,22 +287,9 @@ export default class MicaPlugin extends Plugin {
   }
 
   private preservedConversions=new Map<string,{eventId:string;sourceHash:string;conversion:Awaited<ReturnType<typeof convertToWebp>>}>();
-  private async guestConversionPreview(file:TFile):Promise<void>{
-    if(file.stat.size>5242880) {new Notice("Guest image previews are bounded to 5 MB. Select a smaller image.");return;}
-    const source=await this.app.vault.readBinary(file);
-    const sourceHash=await digest(source);
-    const conversion=await convertToWebp(source,file.extension,this.settings.quality,this.settings.qualityMode,this.settings.maxDimension,this.settings.metadataPolicy);
-    if(conversion.info.width*conversion.info.height>4000000){new Notice("Guest image preview is bounded to four megapixels.");return;}
-    this.preservedConversions.set(file.path,{eventId:jobId(),sourceHash,conversion});
-    const modal=new Modal(this.app);modal.titleEl.setText("Memory-only WebP preview");
-    modal.contentEl.createEl("p",{text:`${source.byteLength} bytes → ${conversion.bytes.byteLength} bytes. Keep this preview open through sign-in/verification, then apply these exact bytes without converting again. No image or journal has been saved.`});
-    const canvas=modal.contentEl.createEl("canvas");canvas.width=160;canvas.height=100;
-    const bitmap=await createImageBitmap(new Blob([conversion.bytes],{type:"image/webp"}));canvas.getContext("2d")?.drawImage(bitmap,0,0,160,100);bitmap.close();
-    const apply=modal.contentEl.createEl("button",{text:"Apply exact conversion after sign-in"});apply.onclick=()=>void this.optimizeFiles([file]);
-    modal.onClose=()=>{this.preservedConversions.delete(file.path);modal.contentEl.empty();};modal.open();
-  }
+
   private async optimizeFiles(files: TFile[]): Promise<void> {
-    if(!this.settings.billingAccessToken || !this.settings.billingAccountLinked){ if(files[0])await this.guestConversionPreview(files[0]);return;}
+    if(!this.settings.billingAccessToken || !this.settings.billingAccountLinked){new Notice("Connect your account in plugin settings to use your free conversions.");return;}
     if (this.processing) return;
     this.processing = true;
     this.batchBillingStopped = false;

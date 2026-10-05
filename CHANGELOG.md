@@ -1,4 +1,24 @@
+# 3.4.41 — 2026-10-04
+
+## 3.4.44 — Source preparation (2026-10-05)
+
+- Incremented source metadata from 3.4.43 and synchronized the existing version surfaces.
+- Reconciled current documentation with the model, account/billing path and release state in code.
+- Built and validated version 3.4.44 for publication; release pending. Earlier receipts remain tied to their original source.
+
+- Use unified account lifetime free-first billing, then purchased credits, without an extra price split dialog or artificial preview/reveal gate.
+- Preserve durable reserve/write/verify/commit recovery and legacy pending operations.
+
+# 3.4.40 — 2026-10-04
+
+- Add a one-time account setup guide and an unobtrusive account reminder until connected, with the exact lifetime free allowance and practical first-use steps.
+- Explain account verification, abuse prevention, thank-you allowances and optional affordable credit packs.
+
 # Changelog
+
+## 3.4.39 — 2026-10-04
+
+Align provider-priced offer titles and the approved billing limits with Rahul's latest table. Prices and descriptions remain Paddle-owned; prior purchase mappings and account balances remain unchanged. Private build only; publication is separate.
 
 ## 3.4.38 — Safer larger-file declines
 

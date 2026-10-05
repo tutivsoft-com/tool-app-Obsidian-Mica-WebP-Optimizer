@@ -1,15 +1,8 @@
 # Mica privacy and threat model
 
-## Preview and lifetime allowance
+## Account lifetime allowance
 
-Guests see a bounded preview held only in memory. Keep the originating window open through registration, email verification and sign-in, then retry that exact result without regeneration. Guests cannot save, apply, export or queue useful output. Closing the preview or restarting loses unrevealed guest content.
-
-Current pack prices, quantities, and availability load from Constance. No image content is uploaded for billing.
-
-Each successful image conversion consumes one native unit. Guest previews accept images up to 5 MB and four megapixels; the thumbnail and size estimate stay in memory, and after sign-in the exact converted bytes are applied. Background/startup conversion requires explicit credit-consumption opt-in. Original images and rollback stay available.
-
-Useful local writes follow durable reserve -> write -> verify -> commit. Full reveal commits before showing complete content. Unknown writes retain their journal for status/output reconciliation; they are never blindly refunded or replayed. Billing sends account/install identity, native dimensions and source/result digests, never vault content or image bytes. Mica does not encrypt images or request an encryption password.
-
+Five successful conversions are available lifetime per account. Free units are consumed first; purchased units cover the remainder. Current prices and availability load from Constance. Conversion and local writes preserve durable reserve, write, verify and commit recovery. Billing never uploads image content.
 
 Mica performs image decoding, resizing, WebP encoding, reference discovery, and file writes locally inside the active Obsidian vault. It has no cloud conversion service, analytics, or AI integration. Billing authorizes useful completion, checkout and balance synchronization; local media is never uploaded.
 
@@ -28,6 +21,6 @@ Mica is designed to reduce accidental data loss and accidental metadata disclosu
 
 When a reference is ambiguous or a note cannot be safely updated, Mica leaves the original in place and reports a review result. During rollback, a generated output is deleted only when no remaining vault reference is found; otherwise it is retained.
 
-## Workflow defaults (v3.4.38)
+## Workflow defaults
 
 Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.

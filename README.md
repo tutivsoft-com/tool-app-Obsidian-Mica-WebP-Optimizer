@@ -1,21 +1,17 @@
 # Mica WebP Optimizer
 
-Version: 3.4.38 — release source.
+Version: 3.4.44. Validated for publication; release pending.
 
 ## Current purchase behavior
 
 Purchase settings load the current public product catalog from Constance. Each available offer supplies its exact Paddle price ID, native-unit grant, unit name, and formatted amount. The client displays backend-provided amounts, enables only offers marked available, and submits the selected price ID through authenticated checkout with quantity one. Existing account balances and granted credits remain associated with the account.
 
 
-## Preview and lifetime allowance
+## Account lifetime allowance
 
-Guests see a bounded preview held only in memory. Keep the originating window open through registration, email verification and sign-in, then retry that exact result without regeneration. Guests cannot save, apply, export or queue useful output. Closing the preview or restarting loses unrevealed guest content.
+5 conversions lifetime per account. One unit per completed conversion.
 
-Constance authorizes metered operations using this app’s native billing unit. The plugin checks current account entitlements and live purchase availability through Constance; each operation follows its documented reserve/commit or quote/confirmation flow.
-
-Each successful image conversion consumes one native unit. Guest previews accept images up to 5 MB and four megapixels; the thumbnail and size estimate stay in memory, and after sign-in the exact converted bytes are applied. Background/startup conversion requires explicit credit-consumption opt-in. Original images and rollback stay available.
-
-Useful local writes follow durable reserve -> write -> verify -> commit. Full reveal commits before showing complete content. Unknown writes retain their journal for status/output reconciliation; they are never blindly refunded or replayed. Billing sends account/install identity, native dimensions and source/result digests, never vault content or image bytes. Mica does not encrypt images or request an encryption password.
+New operations use authenticated account billing with free units first, then purchased remainder. Native operations preserve reserve, write, verify and commit. No separate reveal or split-confirmation gate is required. Meaningful file/scope review remains.
 
 ## Current settings
 
@@ -81,7 +77,7 @@ The WebP encoder is the browser/Electron encoder exposed by Obsidian. Near-lossl
 
 MIT. See [LICENSE](LICENSE) and [PRIVACY.md](PRIVACY.md).
 
-## Workflow defaults (v3.4.38)
+## Workflow defaults
 
 The startup scan is off by default. Enable **Advanced → Convert existing images at startup** to scan the vault after it opens. If the free allowance and purchased credits are exhausted, Mica stops the batch and shows one notice instead of repeating it for each image.
 

@@ -27,7 +27,7 @@ export class MicaSettingTab extends PluginSettingTab {
 
     new Setting(containerEl).setName("Billing").setHeading();
     const balanceSummary = containerEl.createEl("p", { cls: "mica-billing-summary", attr: { role: "status", "aria-live": "polite" } });
-    const renderBalanceSummary = () => balanceSummary.setText(`Cached lifetime starter units remaining: ${this.plugin.settings.freeConversionsRemaining}. Maximum five successful trial operations; Constance authorizes actual remaining units. Purchased balance: ${this.plugin.settings.purchasedConversions.toLocaleString()} conversion(s).`);
+    const renderBalanceSummary = () => balanceSummary.setText(!this.plugin.settings.billingAccountLinked || !this.plugin.settings.billingAccessToken ? "Create an account or sign in, then Connect to activate your lifetime free allowance and confirm your balance." : `Cached lifetime starter units remaining: ${this.plugin.settings.freeConversionsRemaining}. Maximum five successful trial operations; Constance authorizes actual remaining units. Purchased balance: ${this.plugin.settings.purchasedConversions.toLocaleString()} conversion(s).`);
     this.plugin.billingSummaryRefresh = renderBalanceSummary;
     renderBalanceSummary();
     addBillingAccountSettings(containerEl, { state: this.plugin.settings, appId: "mica-webp-optimizer", installationId: this.plugin.settings.constanceDeviceId, appVersion: this.plugin.manifest.version, persist: () => this.plugin.saveSettings(), syncBalance: () => this.plugin.reconcileBilling(), refresh: () => this.display() });
