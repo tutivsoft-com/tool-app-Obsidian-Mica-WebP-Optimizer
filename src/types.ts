@@ -5,6 +5,7 @@ export type MicaPack = "usd_001" | "usd_010";
 
 export interface MicaSettings {
   settingsMode: "simple" | "advanced";
+  debugLogging?: boolean;
   constanceDeviceId: string;
   billingEmail: string;
   billingAccessToken: string;

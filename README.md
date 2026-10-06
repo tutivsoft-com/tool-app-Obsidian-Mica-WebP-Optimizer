@@ -1,90 +1,29 @@
 # Mica WebP Optimizer
 
-Version: 3.4.44. Validated for publication; release pending.
+Convert supported PNG/JPEG images to verified WebP files locally, update safe references and retain originals or backups.
 
-## Current purchase behavior
+Current version: **3.4.56**.
 
-Purchase settings load the current public product catalog from Constance. Each available offer supplies its exact Paddle price ID, native-unit grant, unit name, and formatted amount. The client displays backend-provided amounts, enables only offers marked available, and submits the selected price ID through authenticated checkout with quantity one. Existing account balances and granted credits remain associated with the account.
+## First use
 
+Enable the plugin and use its settings page. Simple is the default settings mode; Advanced exposes optional configuration. Configure image/original preferences, then run Scan current folder and optimize or Scan complete vault and optimize.
 
-## Account lifetime allowance
+Mica converts locally, verifies output and updates resolvable references. Default quality is 82 in lossy mode; metadata is stripped and originals are kept. Review and larger-output prompts default off. Startup conversion and automatic optimization are independent preferences, both off for a new installation. Pause, cancel, conversion logs and batch rollback are available.
 
-5 conversions lifetime per account. One unit per completed conversion.
+## Account and processing
 
-New operations use authenticated account billing with free units first, then purchased remainder. Native operations preserve reserve, write, verify and commit. No separate reveal or split-confirmation gate is required. Meaningful file/scope review remains.
+Processing is local. This plugin has no AI provider integration. Constance handles account and billing operations.
 
-## Current settings
+One successful conversion consumes one account conversion unit. Native conversion writes preserve durable reserve, write, verify and commit recovery. Unknown results reuse the existing event identity.
 
-Settings default to **Simple** and remember the selected mode. Simple contains everyday controls and account/billing. **Advanced** adds specialist preferences and diagnostics. Advanced settings provide specialist preferences and diagnostics. This plugin runs locally without a managed AI provider. A Constance account password is needed for account and billing features; Mica does not encrypt images or ask for an encryption password.
+Connect the existing Constance account in settings; registration can require email verification before signing in again. Billing account passwords are sent for authentication and are not persisted. Access/refresh session data and a stable installation identity are saved locally. Account free usage and purchased balance are determined by Constance; cached values and checkout return URLs do not create entitlement. Catalog displays current formatted names, prices, availability and exact price IDs. Unknown usage and checkout results retain their original identities for recovery.
 
-## Current local account and billing behavior
+## Diagnostics
 
-Use **Connect** with your email and password. A new account is registered; an existing account is authenticated. New users must follow the emailed verification link and Connect again. Incorrect passwords offer password recovery; passwords are never saved. Paid purchases and free allowances belong to the authenticated account, not a locally entered email or an editable cached balance. Reinstalling does not replenish the same account's allowance.
+Help is available in settings and through Open documentation. Open plugin settings and Copy full debug log are command-palette fallbacks. Debug logging defaults off for a new installation; failures and full Error objects/stacks still appear in the local developer console. Timed information is enabled by the debug preference. The copyable diagnostic buffer keeps at most 1,000 summarized events and excludes raw error text, stacks, note text, paths and credentials. Full console exceptions can contain whatever the failed operation placed in its error. Logs are not uploaded automatically.
 
-Constance is the billing authority. Credit units remain app-specific: characters, OCR pages, searches, conversions, repair/protection batches, or captures. Checkout return URLs and cached balances never grant credits. Payment fulfillment comes from the server’s verified Paddle webhook, and balances refresh from authenticated entitlements. Unknown usage or checkout results reuse the persisted operation ID; they must not create a new debit or alternative checkout.
+## Documentation
 
+- [Privacy](PRIVACY.md)
 
-Constance provides authenticated account entitlements, usage balances, and available purchase offers.
-
-
-Mica is an offline-first Obsidian plugin that converts PNG and JPEG/JPG images to verified WebP files while protecting note links and original media.
-
-## MVP features
-
-- Watches newly created or imported PNG/JPEG images in the vault, using a background queue.
-- Scans the current folder or complete vault and converts directly by default; optional review is configured in Settings.
-- Preserves dimensions by default, with an optional maximum longest edge.
-- Supports lossy quality and a near-lossless browser encoder mode.
-- Strips EXIF/device/location metadata by default; a visible setting can keep recognized metadata when the WebP container accepts it.
-- Skips animated PNGs, unsupported formats, remote URLs, configured folders, and generated output folders.
-- Updates Obsidian wikilink embeds, Markdown embeds/links, and HTML `src`/`href` references without changing captions, aliases, fragments, or titles.
-- Detects collisions deterministically (`image.webp`, `image-2.webp`, ...).
-- Verifies that every WebP decodes before writing links.
-- Keeps originals by default, optionally moves them into a recoverable backup folder, and provides rollback for the latest batch.
-- Shows progress, pause/resume, cancellation, per-file failures, larger-output decisions, and a local conversion log.
-
-## Safe workflow
-
-1. A source is read only from the current vault and converted locally.
-2. The output is decoded to verify it is usable.
-3. A journal is persisted before any note reference is rewritten.
-4. Notes are updated only when a supported reference can be matched safely.
-5. Originals remain available unless the user chooses the recoverable backup option.
-
-Automatic conversion of the vault at startup is disabled by default. Enable **Advanced → Convert existing images at startup** to scan after Obsidian finishes loading. Automatic optimization of newly created or imported images remains a separate setting. Other defaults are quality 82, original files kept, metadata stripped, no resizing, and a maximum of two local encodes. A batch stops with one notice when billing denies further conversions.
-
-## Account billing
-
-
-If a paid spend response is lost after a WebP is verified, Mica keeps the conversion and its original image while it retries the same billing event. This avoids charging later for a conversion that was removed. Further paid conversions wait for reconciliation, which runs after sign-in, on balance refresh, and at startup.
-
-## Commands
-
-- `Mica WebP Optimizer: Scan current folder and optimize`
-- `Mica WebP Optimizer: Scan complete vault and optimize`
-- `Mica WebP Optimizer: Cancel active optimization`
-- `Mica WebP Optimizer: Pause or resume optimization`
-- `Mica WebP Optimizer: Rollback most recent optimization batch`
-- `Mica WebP Optimizer: View conversion log`
-
-The image ribbon button and file/folder context menus provide the same workflows.
-
-## Limitations
-
-The WebP encoder is the browser/Electron encoder exposed by Obsidian. Near-lossless is therefore a highest-quality fallback rather than a separate lossless codec. Metadata preservation is best effort (recognized EXIF and compatible JPEG ICC/XMP chunks) and is reported in the conversion log; privacy-first stripping is deterministic. Rollback cannot restore a note that was deleted outside Mica after the batch, and generated WebP files with new external references are retained rather than deleted.
-
-## License
-
-MIT. See [LICENSE](LICENSE) and [PRIVACY.md](PRIVACY.md).
-
-## Workflow defaults
-
-The startup scan is off by default. Enable **Advanced → Convert existing images at startup** to scan the vault after it opens. If the free allowance and purchased credits are exhausted, Mica stops the batch and shows one notice instead of repeating it for each image.
-
-## Account, billing, and credit feedback
-
-Account and billing controls appear at the top of settings. Select Connect with your email and password; verify the emailed link if requested, then Connect again. The settings page shows the current balance and provides balance refresh, sign-out, and purchase controls. Metered actions show the available balance and report the amount used with the remaining balance when the action completes.
-
-## Manual installation
-
-Download `main.js`, `manifest.json`, and `styles.css` from the matching published release and place them in `.obsidian/plugins/mica-webp-optimizer/`, then enable the plugin in Obsidian.
+License terms are in LICENSE.

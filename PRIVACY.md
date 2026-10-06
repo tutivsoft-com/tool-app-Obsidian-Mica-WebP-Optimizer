@@ -1,26 +1,5 @@
-# Mica privacy and threat model
+# Mica WebP Optimizer privacy
 
-## Account lifetime allowance
+Image processing and note-reference updates happen locally. Account requests use the existing service; plugin settings, conversion logs and recovery data are stored locally.
 
-Five successful conversions are available lifetime per account. Free units are consumed first; purchased units cover the remainder. Current prices and availability load from Constance. Conversion and local writes preserve durable reserve, write, verify and commit recovery. Billing never uploads image content.
-
-Mica performs image decoding, resizing, WebP encoding, reference discovery, and file writes locally inside the active Obsidian vault. It has no cloud conversion service, analytics, or AI integration. Billing authorizes useful completion, checkout and balance synchronization; local media is never uploaded.
-
-## Data handling
-
-- Image bytes are read from the active vault and are not uploaded.
-- Authenticated billing requests contain the fixed Mica app identifier, a cryptographically random install identifier, and a bearer session. New checkouts send the exact catalog price ID and a durable idempotency key; recovery of an older saved checkout can reuse its original plan-code selector. An uncertain response never opens an alternative checkout. No vault paths, note contents, image bytes, or generated WebP bytes are sent.
-- Settings, the conversion log, and the latest recovery journal are stored in Obsidian plugin data in the same local profile.
-- Metadata stripping is the default because EXIF can contain GPS coordinates, device identifiers, timestamps, and editing history.
-- The optional keep setting only preserves recognized EXIF and compatible ICC/XMP chunks when the local WebP container accepts them. Unrecognized metadata may be dropped.
-- Mica never automatically deletes originals. The backup option moves originals within the vault and records the old/new path in the journal.
-
-## Threat model
-
-Mica is designed to reduce accidental data loss and accidental metadata disclosure by staging verified output, persisting a journal before rewrites, and keeping originals by default. The optional billing integration is account-authenticated and rate-limited; the plugin holds no shared HMAC secret and exposes no callback endpoint. It is used only to link this install, authorize checkout, claim/spend conversions, and synchronize balance—not to process media. It does not protect against a malicious or compromised Obsidian process, filesystem ransomware, another plugin modifying the same notes concurrently, or a user granting access to the vault to another application. Keep normal vault backups and review the original-file setting before a large run.
-
-When a reference is ambiguous or a note cannot be safely updated, Mica leaves the original in place and reports a review result. During rollback, a generated output is deleted only when no remaining vault reference is found; otherwise it is retained.
-
-## Workflow defaults
-
-Mica starts conversion directly by default. Review before conversion and the larger-output prompt are optional Settings options and are off by default.
+The current full privacy statement is [docs/PRIVACY.md](docs/PRIVACY.md). This root entry is retained for the build and release mirror.

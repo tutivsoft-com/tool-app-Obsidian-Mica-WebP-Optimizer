@@ -1,13 +1,13 @@
-# 3.4.41 — 2026-10-04
+## 3.4.56 — privacy statement and recent improvements (2026-10-07, validated for publication; release pending)
 
-## 3.4.44 — Source preparation (2026-10-05)
+- Add a coupon offer and copy-code action in the account purchase section. The service catalog controls prices and checkout.
+- Apply supported-format and folder/backup exclusions before single-image reads, and deduplicate overlapping recursive selections.
+- Improve first-use guidance, settings organization, optional diagnostics, and recovery for uncertain account/conversion results.
+- Publish the canonical full privacy statement at docs/PRIVACY.md and link to it from the root privacy page.
 
-- Incremented source metadata from 3.4.43 and synchronized the existing version surfaces.
-- Reconciled current documentation with the model, account/billing path and release state in code.
-- Built and validated version 3.4.44 for publication; release pending. Earlier receipts remain tied to their original source.
+## 3.4.44 — Documentation and version alignment (2026-10-05)
 
-- Use unified account lifetime free-first billing, then purchased credits, without an extra price split dialog or artificial preview/reveal gate.
-- Preserve durable reserve/write/verify/commit recovery and legacy pending operations.
+- Align release metadata and clarify current account, billing, and processing behavior.
 
 # 3.4.40 — 2026-10-04
 

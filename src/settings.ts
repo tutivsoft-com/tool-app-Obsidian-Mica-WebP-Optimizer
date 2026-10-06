@@ -3,6 +3,7 @@ import { FREE_CONVERSIONS_PER_DAY } from "./billing-policy";
 
 export const DEFAULT_SETTINGS: MicaSettings = {
   settingsMode: "simple",
+  debugLogging: false,
   constanceDeviceId: "",
   billingEmail: "",
   billingAccessToken: "",
@@ -65,8 +66,9 @@ export function normalizeSettings(raw: Partial<MicaSettings> | null | undefined)
     backupFolder: typeof value.backupFolder === "string" && value.backupFolder.trim() ? value.backupFolder.trim().replace(/^\/|\/$/g, "") : DEFAULT_SETTINGS.backupFolder,
     concurrency: Math.max(1, Math.min(4, Math.floor(Number(value.concurrency) || DEFAULT_SETTINGS.concurrency))),
 
-    autoOptimize: value.automaticConsumptionApproved === true && value.autoOptimize === true,
-    autoConvertImagesAtStart: value.automaticConsumptionApproved === true && value.autoConvertImagesAtStart === true,
+    automaticConsumptionApproved: value.autoOptimize === true || value.autoConvertImagesAtStart === true,
+    autoOptimize: value.autoOptimize === true,
+    autoConvertImagesAtStart: value.autoConvertImagesAtStart === true,
     showLargerFilePrompt: value.showLargerFilePrompt === true,
     reviewBeforeApply: value.reviewBeforeApply === true,
     log: Array.isArray(value.log) ? value.log.slice(-500) : [],

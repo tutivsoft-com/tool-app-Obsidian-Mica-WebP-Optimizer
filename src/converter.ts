@@ -1,3 +1,4 @@
+import { diagnostics } from "./diagnostics";
 import type { ConversionResult, ImageInfo, MetadataPolicy, QualityMode } from "./types";
 import { isAnimatedImage } from "./utils";
 
@@ -71,7 +72,10 @@ function addMetadata(webp: ArrayBuffer, metadata: MetadataChunk[]): { bytes: Arr
 }
 
 async function decodeImage(blob: Blob): Promise<ImageBitmap> {
-  if (typeof createImageBitmap === "function") return createImageBitmap(blob, { imageOrientation: "from-image" });
+const diagnosticEnd1 = diagnostics?.start?.("converter.decodeImage") ?? (() => {});
+try {
+
+  if (typeof createImageBitmap === "function") return await (createImageBitmap(blob, { imageOrientation: "from-image" }));
   const url = URL.createObjectURL(blob);
   try {
     const image = new Image();
@@ -85,6 +89,8 @@ async function decodeImage(blob: Blob): Promise<ImageBitmap> {
     context.drawImage(image, 0, 0);
     return await createImageBitmap(canvas);
   } finally { URL.revokeObjectURL(url); }
+
+} catch (diagnosticError1) { diagnostics?.failure?.("converter.decodeImage", diagnosticError1); throw diagnosticError1; } finally { diagnosticEnd1(); }
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
@@ -92,6 +98,9 @@ function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
 }
 
 export async function convertToWebp(bytes: ArrayBuffer, extension: string, quality: number, qualityMode: QualityMode, maxDimension: number, metadataPolicy: MetadataPolicy): Promise<ConversionResult> {
+const diagnosticEnd2 = diagnostics?.start?.("converter.convertToWebp") ?? (() => {});
+try {
+
   if (isAnimatedImage(bytes, extension)) throw new Error("Animated PNG is not supported.");
   const sourceBlob = new Blob([bytes], { type: extension.toLowerCase() === "png" ? "image/png" : "image/jpeg" });
   const bitmap = await decodeImage(sourceBlob);
@@ -114,4 +123,6 @@ export async function convertToWebp(bytes: ArrayBuffer, extension: string, quali
   const verified = await decodeImage(new Blob([withMetadata.bytes], { type: "image/webp" }));
   verified.close();
   return { bytes: withMetadata.bytes, info, outputWidth: width, outputHeight: height, metadataPreserved: withMetadata.preserved };
+
+} catch (diagnosticError2) { diagnostics?.failure?.("converter.convertToWebp", diagnosticError2); throw diagnosticError2; } finally { diagnosticEnd2(); }
 }

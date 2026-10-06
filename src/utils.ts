@@ -1,3 +1,4 @@
+import { diagnostics } from "./diagnostics.ts";
 import type { CandidateFile, MicaSettings, ScanSummary } from "./types";
 
 export const SUPPORTED_EXTENSIONS = new Set(["png", "jpg", "jpeg"]);
@@ -72,7 +73,8 @@ export function resolveRelative(notePath: string, linkPath: string): string {
 }
 
 export function decodeLinkPath(value: string): string {
-  try { return decodeURIComponent(value); } catch { return value; }
+  try { return decodeURIComponent(value); } catch (caughtError1) {
+diagnostics.failure("utils.caught_2", caughtError1); return value; }
 }
 
 export function splitLinkSuffix(value: string): { path: string; suffix: string } {
