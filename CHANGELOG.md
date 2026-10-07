@@ -1,4 +1,9 @@
-## 3.4.56 — privacy statement and recent improvements (2026-10-07, validated for publication; release pending)
+## 3.4.57 — 2026-10-08
+
+- Refresh the public product documentation and synchronize release metadata.
+- Preserve the existing plugin behavior.
+
+## 3.4.56 — privacy statement and recent improvements (2026-10-07, published)
 
 - Add a coupon offer and copy-code action in the account purchase section. The service catalog controls prices and checkout.
 - Apply supported-format and folder/backup exclusions before single-image reads, and deduplicate overlapping recursive selections.
@@ -18,7 +23,6 @@
 
 ## 3.4.39 — 2026-10-04
 
-Align provider-priced offer titles and the approved billing limits with Rahul's latest table. Prices and descriptions remain Paddle-owned; prior purchase mappings and account balances remain unchanged. Private build only; publication is separate.
 
 ## 3.4.38 — Safer larger-file declines
 

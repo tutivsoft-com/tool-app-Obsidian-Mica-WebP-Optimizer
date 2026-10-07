@@ -2,4 +2,4 @@
 
 Image processing and note-reference updates happen locally. Account requests use the existing service; plugin settings, conversion logs and recovery data are stored locally.
 
-The current full privacy statement is [docs/PRIVACY.md](docs/PRIVACY.md). This root entry is retained for the build and release mirror.
+The current full privacy statement is [docs/PRIVACY.md](docs/PRIVACY.md).

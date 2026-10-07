@@ -1,29 +1,65 @@
 # Mica WebP Optimizer
 
-Convert supported PNG/JPEG images to verified WebP files locally, update safe references and retain originals or backups.
+Convert Obsidian image attachments to WebP while updating supported references.
 
-Current version: **3.4.56**.
+**Best for:** Obsidian users maintaining image-heavy notes and attachment folders.
 
-## First use
+## Top 10 features
 
-Enable the plugin and use its settings page. Simple is the default settings mode; Advanced exposes optional configuration. Configure image/original preferences, then run Scan current folder and optimize or Scan complete vault and optimize.
+1. Convert PNG images.
+2. Convert JPEG images.
+3. Run conversion locally.
+4. Choose quality settings.
+5. Use near-lossless mode.
+6. Strip or preserve supported metadata.
+7. Update resolvable image references.
+8. Keep originals or move them to backup.
+9. Pause or cancel processing.
+10. Review logs and roll back supported batches.
 
-Mica converts locally, verifies output and updates resolvable references. Default quality is 82 in lossy mode; metadata is stripped and originals are kept. Review and larger-output prompts default off. Startup conversion and automatic optimization are independent preferences, both off for a new installation. Pause, cancel, conversion logs and batch rollback are available.
+## Example workflow
 
-## Account and processing
+**Before:** A note embeds several PNG screenshots that you want to optimize.
 
-Processing is local. This plugin has no AI provider integration. Constance handles account and billing operations.
+**After:** Convert the supported images to WebP, update their references and keep the originals for comparison.
 
-One successful conversion consumes one account conversion unit. Native conversion writes preserve durable reserve, write, verify and commit recovery. Unknown results reuse the existing event identity.
+## Pricing
 
-Connect the existing Constance account in settings; registration can require email verification before signing in again. Billing account passwords are sent for authentication and are not persisted. Access/refresh session data and a stable installation identity are saved locally. Account free usage and purchased balance are determined by Constance; cached values and checkout return URLs do not create entitlement. Catalog displays current formatted names, prices, availability and exact price IDs. Unknown usage and checkout results retain their original identities for recovery.
+A connected account includes 5 conversions as a one-time lifetime allowance. Previous use counts toward that allowance.
 
-## Diagnostics
+| Pack | USD price | Included units |
+|---|---:|---:|
+| Starter | $2.00 | 50 conversions |
+| Standard | $4.00 | 150 conversions |
+| Pro | $8.00 | 450 conversions |
+| Ultimate | $14.00 | 1,200 conversions |
 
-Help is available in settings and through Open documentation. Open plugin settings and Copy full debug log are command-palette fallbacks. Debug logging defaults off for a new installation; failures and full Error objects/stacks still appear in the local developer console. Timed information is enabled by the debug preference. The copyable diagnostic buffer keeps at most 1,000 summarized events and excludes raw error text, stacks, note text, paths and credentials. Full console exceptions can contain whatever the failed operation placed in its error. Logs are not uploaded automatically.
+Packs are one-time purchases. Purchased units do not expire. Final tax and local currency are shown at checkout.
 
-## Documentation
+## What to know
 
-- [Privacy](PRIVACY.md)
+Images are converted locally. File-size savings vary by image and quality setting; originals are kept by default.
 
-License terms are in LICENSE.
+---
+
+## Discover Mica WebP Optimizer
+
+Whether you need to convert PNG images or convert JPEG images, Mica WebP Optimizer provides a focused workflow for Obsidian users maintaining image-heavy notes and attachment folders.
+
+### Common questions
+
+**What can I use it for?**
+
+You can convert PNG images, choose quality settings or use near-lossless mode.
+
+**How do I get started?**
+
+Enable the plugin in Obsidian, open its settings and choose the action that fits your note. Connect your account for metered actions; the settings page shows your remaining allowance and available packs.
+
+### Search description
+
+Convert Obsidian image attachments to WebP while updating supported references. Designed for Obsidian users maintaining image-heavy notes and attachment folders.
+
+### Related topics
+
+Obsidian WebP optimizer, PNG JPEG to WebP, image attachment conversion, update Markdown embeds.
