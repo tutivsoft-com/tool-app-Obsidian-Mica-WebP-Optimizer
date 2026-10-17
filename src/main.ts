@@ -1,3 +1,4 @@
+import { initializeMatomo } from "./matomo-plugin";
 import { selectedFiles, markdownFile, registerSelectionAction } from "./selection-scope";
 import { diagnostics } from "./diagnostics";
 import { Modal } from "obsidian";
@@ -39,6 +40,7 @@ export default class MicaPlugin extends Plugin {
   private noteLocks = new Map<string, Promise<void>>();
 
   async onload(): Promise<void> {
+    initializeMatomo(this);
 let diagnosticStartupEnd: () => void = () => {};
 
 const diagnosticEnd1 = diagnostics?.start?.("main.onload") ?? (() => {});

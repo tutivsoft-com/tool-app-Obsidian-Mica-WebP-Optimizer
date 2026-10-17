@@ -1,40 +1,40 @@
-## 3.4.58 — 2026-10-16
+## 3.4.61 - 2026-10-16
 
 Repository maintenance: fill missing standard metadata, align product version carriers, and keep generated outputs/caches out of source control. Preserve existing code, assets, data, credentials and history.
 
-## 3.4.57 — 2026-10-08
+## 3.4.57 - 2026-10-08
 
 - Refresh the public product documentation and synchronize release metadata.
 - Preserve the existing plugin behavior.
 
-## 3.4.56 — privacy statement and recent improvements (2026-10-07, published)
+## 3.4.56 - privacy statement and recent improvements (2026-10-07, published)
 
 - Add a coupon offer and copy-code action in the account purchase section. The service catalog controls prices and checkout.
 - Apply supported-format and folder/backup exclusions before single-image reads, and deduplicate overlapping recursive selections.
 - Improve first-use guidance, settings organization, optional diagnostics, and recovery for uncertain account/conversion results.
 - Publish the canonical full privacy statement at docs/PRIVACY.md and link to it from the root privacy page.
 
-## 3.4.44 — Documentation and version alignment (2026-10-05)
+## 3.4.44 - Documentation and version alignment (2026-10-05)
 
 - Align release metadata and clarify current account, billing, and processing behavior.
 
-# 3.4.40 — 2026-10-04
+# 3.4.40 - 2026-10-04
 
 - Add a one-time account setup guide and an unobtrusive account reminder until connected, with the exact lifetime free allowance and practical first-use steps.
 - Explain account verification, abuse prevention, thank-you allowances and optional affordable credit packs.
 
 # Changelog
 
-## 3.4.39 — 2026-10-04
+## 3.4.39 - 2026-10-04
 
 
-## 3.4.38 — Safer larger-file declines
+## 3.4.38 - Safer larger-file declines
 
 - Release the native operation reservation when keeping the original after a larger WebP prompt.
 - Recover ambiguous release responses from the durable operation status before allowing a retry.
 - Clarify account-password and checkout price-ID disclosures.
 
-## 3.4.37 — Account session recovery (superseded candidate)
+## 3.4.37 - Account session recovery (superseded candidate)
 
 - Preserve authenticated sessions when installation linking fails recoverably, and clear credentials rejected by the installation endpoint.
 - Historical preparation recorded a successful build, 47 tests, bundle syntax, and dependency audit. This candidate was superseded before publication.
@@ -49,14 +49,14 @@ Repository maintenance: fill missing standard metadata, align product version ca
 - Load current offers from Constance public-products, display its formatted prices and approved native-unit grants, and submit exact-price quantity-one checkouts with durable idempotency recovery.
 
 
-## 3.4.30 — Billing account session and recovery
+## 3.4.30 - Billing account session and recovery
 
 - Registration with required email verification now remains pending until the confirmation link is used; no installation is linked early.
 - Sign out revokes and clears the refresh session, and the account email cannot be edited while signed in.
 - Added a visible central password-reset link in account settings.
 
 
-## 3.4.28 — Account and credit clarity
+## 3.4.28 - Account and credit clarity
 
 - Moved account and billing controls to the top of settings.
 - Simplified account controls to email, password, Register, Sign in, Sign out, balance refresh, and purchase buttons.
@@ -146,11 +146,11 @@ Repository maintenance: fill missing standard metadata, align product version ca
 - Persisted credit-spend attempts before remote work and reused the same event
   ID when a response is lost or a request is retried.
 
-## 3.4.2 — 2026-09-11
+## 3.4.2 - 2026-09-11
 
 - Final Mica release with live Paddle catalog billing for `$1/100` and `$10/1,000` conversion packs; source and publish artifacts are synchronized for the public release.
 
-## 3.4.1 — 2026-09-11
+## 3.4.1 - 2026-09-11
 
 - Live Mica Paddle catalog provisioned: `$1/100` uses `pri_01m28hmw9t7tz51xvqatwe2dp6`; `$10/1,000` uses `pri_01m28hmx9n6g7kgdxvxagwd13k`.
 
