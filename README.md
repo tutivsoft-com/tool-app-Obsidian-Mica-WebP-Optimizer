@@ -66,6 +66,6 @@ Obsidian WebP optimizer, PNG JPEG to WebP, image attachment conversion, update M
 
 ## Release
 
-Version 3.4.62 is prepared for manual validation and publication.
+Version 3.4.62 was published on 17 October 2026. Its final Obsidian Community audit completed successfully. [Release assets](https://github.com/tutivsoft-com/tool-app-Obsidian-Mica-WebP-Optimizer/releases/tag/3.4.62).
 
 Basic app usage events are sent to https://atcdn.cyou without note contents. Account and purchase operations use Constance.
