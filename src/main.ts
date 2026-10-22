@@ -3,8 +3,8 @@ import { selectedFiles, markdownFile, registerSelectionAction } from "./selectio
 import { diagnostics } from "./diagnostics";
 import { Modal } from "obsidian";
 import { Menu, Notice, Plugin, TFile, TFolder } from "obsidian";
-import { retryPendingSpendEvents, spendPurchasedConversion, syncPurchasedConversions, withBillingLock } from "./billing";
-import { createBillingEventId, FREE_CONVERSIONS_PER_DAY, localCalendarDate } from "./billing-policy";
+import { syncPurchasedConversions } from "./billing";
+import { FREE_CONVERSIONS_PER_DAY, localCalendarDate } from "./billing-policy";
 import { reserveNative, renderNativePacks, jobId, digest, recoverNative } from "./native-operations";
 import { claimAccountFreeUsage } from "./constance-account";
 import { convertToWebp } from "./converter";
@@ -109,8 +109,6 @@ try {
 
     await recoverNative({app:this.app,settings:this.settings,persistNative:()=>this.saveSettings()});
     await syncPurchasedConversions(this, strict);
-    await retryPendingSpendEvents(this);
-    await withBillingLock(this, () => this.reconcileCommittedFreeUsage());
     this.refreshBillingSummary();
     if (this.settings.freeConversionsRemaining > 0 || this.settings.purchasedConversions > 0) {
       this.noCreditsNoticeShown = false;
@@ -135,135 +133,6 @@ try {
       this.autoOptimizationBlockedForCredits = false;
     }
   }
-
-  private async reconcileCommittedFreeUsage(): Promise<boolean> {
-const diagnosticEnd5 = diagnostics?.start?.("main.reconcileCommittedFreeUsage") ?? (() => {});
-try {
-
-    for (const pending of [...this.settings.pendingFreeUsageEvents].filter(item => item.outputCommitted)) {
-      const result = await claimAccountFreeUsage(this.settings, "mica-webp-optimizer", this.settings.constanceDeviceId, pending.eventId, pending.amount, () => this.saveSettings());
-      if (result.kind === "error" || result.kind === "auth-required") return false;
-      if (result.kind === "insufficient") {
-        const paid = await spendPurchasedConversion(this, pending.eventId);
-        if (paid.kind !== "ok") return false;
-        this.settings.purchasedConversions = paid.balance;
-      } else this.settings.freeConversionsRemaining = result.remaining;
-      this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter(item => item.eventId !== pending.eventId);
-      try { await this.saveSettings(); }
-      catch (caughtError11) {
-diagnostics.failure("main.caught_12", caughtError11); this.settings.pendingFreeUsageEvents.push(pending); return false; }
-    }
-    return true;
-
-} catch (diagnosticError5) { diagnostics?.failure?.("main.reconcileCommittedFreeUsage", diagnosticError5); throw diagnosticError5; } finally { diagnosticEnd5(); }
-}
-
-  private async chargeConversion(): Promise<"verified" | "pending" | "denied"> {
-const diagnosticEnd6 = diagnostics?.start?.("main.chargeConversion") ?? (() => {});
-try {
-
-    return await (withBillingLock(this, async () => {
-const diagnosticEnd7 = diagnostics?.start?.("main.background.7097") ?? (() => {});
-try {
-
-      if (this.batchBillingStopped) return "denied";
-      if (!(await this.reconcileCommittedFreeUsage()) || this.settings.pendingSpendEvents.length > 0) {
-        return await (this.stopBatchForBilling("usage-recovery", "Mica: a saved conversion is awaiting billing confirmation. Reconnect or refresh balance before converting more images."));
-      }
-      this.ensureBillingState();
-      if (!this.settings.billingAccessToken || !this.settings.billingAccountLinked) {
-        return await (this.stopBatchForBilling("billing-account", "Mica: sign in or create an account in plugin settings before converting. This batch has stopped."));
-      }
-      const pendingFreeUsage = this.settings.pendingFreeUsageEvents.find((item) => item.amount === 1) ?? { eventId: `free_${createBillingEventId()}`, amount: 1, outputCommitted: true };
-      pendingFreeUsage.outputCommitted = true;
-      if (!this.settings.pendingFreeUsageEvents.some((item) => item.eventId === pendingFreeUsage.eventId)) {
-        this.settings.pendingFreeUsageEvents = [...this.settings.pendingFreeUsageEvents, pendingFreeUsage];
-      }
-      try { await this.saveSettings(); }
-      catch (error) {
-diagnostics.failure("main.caught_13", error);
-        this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter(item => item.eventId !== pendingFreeUsage.eventId);
-        throw error;
-      }
-      const free = await claimAccountFreeUsage(this.settings, "mica-webp-optimizer", this.settings.constanceDeviceId, pendingFreeUsage.eventId, pendingFreeUsage.amount, () => this.saveSettings());
-      if (free.kind === "ok") {
-        this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter((item) => item.eventId !== pendingFreeUsage.eventId);
-        this.settings.freeConversionsRemaining = free.remaining;
-        try { await this.saveSettings(); return "verified"; }
-        catch (caughtError14) {
-diagnostics.failure("main.caught_15", caughtError14);
-          this.settings.pendingFreeUsageEvents.push(pendingFreeUsage);
-          this.batchBillingStopped = true;
-          this.notifyBillingOnce("free-receipt", "Mica: conversion saved. Refresh your balance to confirm the charge.");
-          return "pending";
-        }
-      }
-      if (free.kind === "auth-required") {
-        this.settings.billingAccessToken = "";
-        this.settings.billingRefreshToken = "";
-        this.settings.billingAccessTokenExpiresAt = 0;
-        this.settings.billingAccountLinked = false;
-        try { await this.saveSettings(); } catch (caughtError16) {
-diagnostics.failure("main.caught_17", caughtError16); /* The pre-claim journal remains durable. */ }
-        this.stopBatchForBilling("billing-session", "Mica: this conversion is saved. Connect again to confirm its allowance; this batch has stopped.");
-        return "pending";
-      }
-      if (free.kind === "error") {
-        this.stopBatchForBilling("allowance-check", "Mica: this conversion is saved while its allowance is verified. Nothing else in this batch will be converted.");
-        return "pending";
-      }
-      this.settings.pendingFreeUsageEvents = this.settings.pendingFreeUsageEvents.filter((item) => item.eventId !== pendingFreeUsage.eventId);
-      this.settings.freeConversionsRemaining = 0;
-      try { await this.saveSettings(); }
-      catch (caughtError18) {
-diagnostics.failure("main.caught_19", caughtError18);
-        this.settings.pendingFreeUsageEvents.push(pendingFreeUsage);
-        this.batchBillingStopped = true;
-        return "pending";
-      }
-      if (this.settings.pendingSpendEvents.length > 0) {
-        return await (this.stopBatchForBilling("spend-reconciliation", "Mica: a previous charge is still being confirmed. This batch has stopped; try again when the connection is restored."));
-      }
-      const paidEventId = createBillingEventId();
-      const result = await spendPurchasedConversion(this, paidEventId);
-      if (result.kind === "ok") {
-        this.settings.purchasedConversions = result.balance;
-        try {
-          await this.saveSettings();
-          return "verified";
-        } catch (error) {
-diagnostics.failure("main.caught_20", error);
-          this.settings.pendingSpendEvents.push({ eventId: paidEventId, amount: 1 });
-          this.batchBillingStopped = true;
-          diagnostics?.legacy?.("error", "main.mica_purchased_balance_could_not_be_saved_after_a_successful_spen");
-          this.notifyBillingOnce("balance-save", "Mica: this conversion is saved, but the updated balance could not be stored. Reopen Mica to refresh it.");
-          return "pending";
-        }
-      }
-      if (result.kind === "insufficient") {
-        this.batchBillingStopped = true;
-        this.autoOptimizationBlockedForCredits = true;
-        this.queue = [];
-        this.queued.clear();
-        if (!this.noCreditsNoticeShown) {
-          this.noCreditsNoticeShown = true;
-          new Notice("Mica: no free or purchased conversion credits remain. This batch has stopped. Add credits in Settings.");
-        }
-        return "denied";
-      } else {
-        // The server may have accepted this idempotent spend before the reply
-        // was lost. Keep the verified image so a later reconciliation cannot
-        // charge the account for an image we removed.
-        this.notifyBillingOnce("spend-pending", "Mica: conversion saved. Its charge is awaiting confirmation. Check your balance when connected.");
-        this.batchBillingStopped = true;
-        return "pending";
-      }
-
-} catch (diagnosticError7) { diagnostics?.failure?.("main.background.7097", diagnosticError7); throw diagnosticError7; } finally { diagnosticEnd7(); }
-}));
-
-} catch (diagnosticError6) { diagnostics?.failure?.("main.chargeConversion", diagnosticError6); throw diagnosticError6; } finally { diagnosticEnd6(); }
-}
 
   private stopBatchForBilling(key: string, message: string): "denied" {
     this.batchBillingStopped = true;

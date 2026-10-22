@@ -1,5 +1,5 @@
 /* Matomo tracking only. No prompts, settings UI or changes to existing preferences. */
-(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.TutivSoftMatomo=api;})(globalThis,function(){
+const matomoApi = (() => {
   'use strict';
   const actions={feature:['started','completed','failed'],onboarding:['started','completed'],ai:['completed','failed'],billing:['checkout_opened'],error:['operation_failed'],game:['level_started','level_completed','level_failed']};
   class MatomoClient {
@@ -38,4 +38,5 @@
   }
   function localStorageAdapter(storage){return{get:async k=>storage.getItem(k),set:async(k,v)=>storage.setItem(k,v)};}
   return{MatomoClient,localStorageAdapter};
-});
+})();
+export const { MatomoClient, localStorageAdapter } = matomoApi;

@@ -1,144 +1,48 @@
 import { diagnostics } from "./diagnostics";
-import { resumeAccountCheckout } from "./billing-checkout";
-import { openAccountCheckout } from "./billing-checkout";
-import { Notice, requestUrl } from "obsidian";
 import type MicaPlugin from "./main";
-import { BillingLock, createBillingEventId, isPlaceholderPriceId } from "./billing-policy";
-import { refreshBillingSession, spendAccountCredits } from "./constance-account";
 import type { MicaPack } from "./types";
-
-export { isPlaceholderPriceId } from "./billing-policy";
-
-const BASE_URL = "https://app.tutivsoft.com";
+import { BillingLock, isPlaceholderPriceId } from "./billing-policy";
+import { requestAuthenticatedBilling, refreshBillingSession } from "./constance-account";
+import { CONSTANCE_API, accountBalance } from "./constance-v2";
+import { openAccountCheckout, resumeAccountCheckout } from "./billing-checkout";
+export { isPlaceholderPriceId };
+export type { MicaPack };
 export const MICA_APP_ID = "mica-webp-optimizer";
-export type { MicaPack } from "./types";
-const MICA_PLAN_CODES: Record<MicaPack, string> = {
-  usd_001: "one_time",
-  usd_010: "standard",
-};
-
-const billingLocks = new WeakMap<MicaPlugin, BillingLock>();
-
-function billingLock(plugin: MicaPlugin): BillingLock {
-  let lock = billingLocks.get(plugin);
-  if (!lock) {
-    lock = new BillingLock();
-    billingLocks.set(plugin, lock);
-  }
-  return lock;
-}
-
+const locks = new WeakMap<MicaPlugin, BillingLock>();
 export function withBillingLock<T>(plugin: MicaPlugin, operation: () => Promise<T>): Promise<T> {
-  return billingLock(plugin).run(operation);
+  if (!locks.has(plugin)) locks.set(plugin, new BillingLock());
+  return locks.get(plugin)!.run(operation);
 }
-
-export type SpendResult =
-  | { kind: "ok"; balance: number }
-  | { kind: "insufficient" }
-  | { kind: "error" };
-
+export type SpendResult = {kind:"ok";balance:number}|{kind:"insufficient"}|{kind:"error"};
 export async function syncPurchasedConversions(plugin: MicaPlugin, strict = false): Promise<void> {
-const diagnosticEnd1 = diagnostics?.start?.("billing.syncPurchasedConversions") ?? (() => {});
-try {
-
-  resumeAccountCheckout({ state: plugin.settings, appId: MICA_APP_ID, installationId: plugin.settings.constanceDeviceId,
-    persist: () => plugin.saveSettings(), syncBalance: () => syncPurchasedConversions(plugin), refreshSession: () => refreshBillingSession(plugin.settings, () => plugin.saveSettings()) });
-
+  const host = {state:plugin.settings, appId:MICA_APP_ID, installationId:plugin.settings.constanceDeviceId,
+    persist:()=>plugin.saveSettings(), syncBalance:()=>syncPurchasedConversions(plugin, true),
+    refreshSession:()=>refreshBillingSession(plugin.settings,()=>plugin.saveSettings())};
+  resumeAccountCheckout(host);
   await withBillingLock(plugin, async () => {
-const diagnosticEnd2 = diagnostics?.start?.("billing.background.1680") ?? (() => {});
-try {
-
-    if (!plugin.settings.constanceDeviceId || !plugin.settings.billingAccessToken || !plugin.settings.billingAccountLinked) { if (strict) throw new Error("Connect your account before refreshing."); return; }
+    if (!plugin.settings.billingAccountLinked) {if (strict) throw new Error("Connect your account first."); return;}
     try {
-      if (plugin.settings.billingRefreshToken && plugin.settings.billingAccessTokenExpiresAt > 0 && plugin.settings.billingAccessTokenExpiresAt <= Date.now() + 30_000) await refreshBillingSession(plugin.settings, () => plugin.saveSettings());
-      const entitlementRequest = () => (diagnostics?.request?.("network.billing.syncPurchasedConversions", requestUrl, {
-          url: `${BASE_URL}/api/v1/billing/entitlements/me?${new URLSearchParams({ app_id: MICA_APP_ID, installation_id: plugin.settings.constanceDeviceId }).toString()}`,
-          method: "GET",
-          throw: false,
-          headers: { Authorization: `Bearer ${plugin.settings.billingAccessToken}` },
-        }) ?? requestUrl({
-          url: `${BASE_URL}/api/v1/billing/entitlements/me?${new URLSearchParams({ app_id: MICA_APP_ID, installation_id: plugin.settings.constanceDeviceId }).toString()}`,
-          method: "GET",
-          throw: false,
-          headers: { Authorization: `Bearer ${plugin.settings.billingAccessToken}` },
-        }));
-      let response = await entitlementRequest();
-      if (response.status === 401) {
-        if (await refreshBillingSession(plugin.settings, () => plugin.saveSettings())) response = await entitlementRequest();
-        else if (plugin.settings.billingRefreshToken) throw new Error("Account refresh is temporarily unavailable.");
-      }
-      if (response.status === 401 || response.status === 403 || response.status === 404) { plugin.settings.billingAccessToken = ""; plugin.settings.billingRefreshToken = ""; plugin.settings.billingAccessTokenExpiresAt = 0; plugin.settings.billingAccountLinked = false; await plugin.saveSettings(); if (strict) throw new Error("Reconnect your account."); return; }
-      if (response.status < 200 || response.status >= 300) throw new Error(`HTTP ${response.status}`);
-      const balance = Number(response.json?.data?.credits?.total_available ?? response.json?.data?.credits?.balance);
-      const free = response.json?.data?.free_usage?.remaining;
-      if (!Number.isFinite(free) || free < 0) throw new Error("Your balance could not be updated. Refresh it and try again.");
-      if (response.json?.data?.credits == null || (response.json.data.credits.total_available ?? response.json.data.credits.balance) == null || String(response.json.data.credits.total_available ?? response.json.data.credits.balance).trim() === "" || !Number.isFinite(balance) || balance < 0) throw new Error("Your balance could not be updated. Refresh it and try again.");
-      plugin.settings.freeConversionsRemaining = Math.floor(free);
-      plugin.settings.purchasedConversions = Math.max(0, Math.floor(balance));
+      const response = await requestAuthenticatedBilling(plugin.settings,()=>plugin.saveSettings(),{
+        url:CONSTANCE_API+"/billing/entitlements/me?app_id="+MICA_APP_ID,method:"GET",throw:false});
+      if (response.status!==200) throw new Error("Balance unavailable. Reconnect or try again.");
+      const balance=accountBalance(response.json?.data,MICA_APP_ID);
+      plugin.settings.freeConversionsRemaining=balance.free_usage.remaining;
+      plugin.settings.purchasedConversions=balance.credits.balance;
       await plugin.saveSettings();
+      const acknowledgement = await requestAuthenticatedBilling(plugin.settings,()=>plugin.saveSettings(),{
+        url:CONSTANCE_API+"/billing/sync",method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({app_id:MICA_APP_ID,revision:balance.revision}),throw:false});
+      if(acknowledgement.status!==200 || !Number.isSafeInteger(acknowledgement.json?.data?.recorded_revision) || acknowledgement.json.data.recorded_revision < balance.revision)
+        throw new Error("Your balance was saved but its acknowledgement is pending. Refresh again.");
       plugin.refreshBillingSummary?.();
-    } catch (error) {
-diagnostics.failure("billing.caught_extra_1", error);
-      diagnostics?.legacy?.("warn", "billing.mica_constance_balance_sync_failed");
-      if (strict) throw error;
-    }
-
-} catch (diagnosticError2) { diagnostics?.failure?.("billing.background.1680", diagnosticError2); throw diagnosticError2; } finally { diagnosticEnd2(); }
-});
-
-} catch (diagnosticError1) { diagnostics?.failure?.("billing.syncPurchasedConversions", diagnosticError1); throw diagnosticError1; } finally { diagnosticEnd1(); }
+    } catch(error) {diagnostics.failure("billing.balance",error);if(strict)throw error;}
+  });
 }
-
-export async function spendPurchasedConversion(plugin: MicaPlugin, stableEventId = createBillingEventId()): Promise<SpendResult> {
-const diagnosticEnd3 = diagnostics?.start?.("billing.spendPurchasedConversion") ?? (() => {});
-try {
-
-  if (!plugin.settings.constanceDeviceId) return { kind: "error" };
-  plugin.settings.pendingSpendEvents = [...plugin.settings.pendingSpendEvents, { eventId: stableEventId, amount: 1 }]
-    .filter((item, index, items) => items.findIndex((candidate) => candidate.eventId === item.eventId) === index);
-  await plugin.saveSettings();
-  try {
-    const result = await spendAccountCredits(plugin.settings, MICA_APP_ID, plugin.settings.constanceDeviceId, stableEventId, 1, () => plugin.saveSettings());
-    if (result.kind === "auth-required") { plugin.settings.billingAccessToken = ""; plugin.settings.billingRefreshToken = ""; plugin.settings.billingAccessTokenExpiresAt = 0; plugin.settings.billingAccountLinked = false; await plugin.saveSettings(); return { kind: "error" }; }
-    if (result.kind === "insufficient") { plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== stableEventId); await plugin.saveSettings(); return { kind: "insufficient" }; }
-    if (result.kind === "error") return { kind: "error" };
-    const balance = Number(result.balance);
-    if (!Number.isFinite(balance)) return { kind: "error" };
-    plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== stableEventId);
-    return { kind: "ok", balance: Math.max(0, Math.floor(balance)) };
-  } catch (error) {
-diagnostics.failure("billing.caught_extra_2", error);
-    diagnostics?.legacy?.("error", "billing.mica_constance_credit_spend_failed");
-    return { kind: "error" };
-  }
-
-} catch (diagnosticError3) { diagnostics?.failure?.("billing.spendPurchasedConversion", diagnosticError3); throw diagnosticError3; } finally { diagnosticEnd3(); }
-}
-
-export async function retryPendingSpendEvents(plugin: MicaPlugin): Promise<void> {
-const diagnosticEnd4 = diagnostics?.start?.("billing.retryPendingSpendEvents") ?? (() => {});
-try {
-
-  for (const pending of [...(plugin.settings.pendingSpendEvents ?? [])]) {
-    const result = await spendPurchasedConversion(plugin, pending.eventId);
-    if (result.kind === "error") break;
-    if (result.kind === "ok") plugin.settings.purchasedConversions = result.balance;
-    else plugin.settings.purchasedConversions = 0;
-    plugin.settings.pendingSpendEvents = plugin.settings.pendingSpendEvents.filter((item) => item.eventId !== pending.eventId);
-    await plugin.saveSettings();
-  }
-
-} catch (diagnosticError4) { diagnostics?.failure?.("billing.retryPendingSpendEvents", diagnosticError4); throw diagnosticError4; } finally { diagnosticEnd4(); }
-}
-
-export async function openCheckout(plugin: MicaPlugin, pack: MicaPack): Promise<void> {
-const diagnosticEnd5 = diagnostics?.start?.("billing.openCheckout") ?? (() => {});
-try {
-
-  await openAccountCheckout({
-    state: plugin.settings, appId: MICA_APP_ID, installationId: plugin.settings.constanceDeviceId,
-    persist: () => plugin.saveSettings(), syncBalance: () => syncPurchasedConversions(plugin), refreshSession: () => refreshBillingSession(plugin.settings, () => plugin.saveSettings()),
-  }, MICA_PLAN_CODES[pack]);
-
-} catch (diagnosticError5) { diagnostics?.failure?.("billing.openCheckout", diagnosticError5); throw diagnosticError5; } finally { diagnosticEnd5(); }
+/** Keep uncertain v1 spends saved. They must never become new v2 debits. */
+export async function spendPurchasedConversion(_plugin:MicaPlugin,_eventId?:string):Promise<SpendResult>{return {kind:"error"};}
+export async function retryPendingSpendEvents(_plugin:MicaPlugin):Promise<void>{}
+export async function openCheckout(plugin:MicaPlugin,pack:MicaPack):Promise<void>{
+  await openAccountCheckout({state:plugin.settings,appId:MICA_APP_ID,installationId:plugin.settings.constanceDeviceId,
+    persist:()=>plugin.saveSettings(),syncBalance:()=>syncPurchasedConversions(plugin, true),
+    refreshSession:()=>refreshBillingSession(plugin.settings,()=>plugin.saveSettings())},pack==="usd_001"?"starter":"standard");
 }

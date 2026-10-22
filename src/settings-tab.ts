@@ -125,7 +125,7 @@ renderBalanceSummary();
 diagnosticStage14();
 
     const diagnosticStage15 = diagnostics?.start?.("settings.render.account") ?? (() => {});
-addBillingAccountSettings(containerEl, { state: this.plugin.settings, appId: "mica-webp-optimizer", installationId: this.plugin.settings.constanceDeviceId, appVersion: this.plugin.manifest.version, persist: () => this.plugin.saveSettings(), syncBalance: () => this.plugin.reconcileBilling(), refresh: () => this.display() });
+addBillingAccountSettings(containerEl, { state: this.plugin.settings, appId: "mica-webp-optimizer", installationId: this.plugin.settings.constanceDeviceId, appVersion: this.plugin.manifest.version, persist: () => this.plugin.saveSettings(), syncBalance: () => this.plugin.reconcileBilling(true), refresh: () => this.display() });
 diagnosticStage15();
 
     const diagnosticStage16 = diagnostics?.start?.("settings.render.purchased_balance") ?? (() => {});
@@ -142,10 +142,10 @@ diagnostics.failure("settings-tab.caught_10", caughtError9); new Notice("Mica: b
 diagnosticStage16();
 
     const diagnosticStage17 = diagnostics?.start?.("settings.render.catalog") ?? (() => {});
-void diagnostics.guard("settings-tab.background_11", () => (renderNativePacks(containerEl,{app:this.app,settings:this.plugin.settings,persistNative:()=>this.plugin.saveSettings()},"mica-webp-optimizer",async plan=>{
+void diagnostics.guard("settings-tab.background_11", () => (renderNativePacks(containerEl,{app:this.app,settings:this.plugin.settings,persistNative:()=>this.plugin.saveSettings(),syncBalance:()=>this.plugin.reconcileBilling(true)},"mica-webp-optimizer",async plan=>{
 const diagnosticEnd32 = diagnostics?.start?.("settings-tab.background.5440") ?? (() => {});
 try {
-const {openAccountCheckoutByPrice}=await import("./billing-checkout");await openAccountCheckoutByPrice({state:this.plugin.settings,appId:"mica-webp-optimizer",installationId:this.plugin.settings.constanceDeviceId,persist:()=>this.plugin.saveSettings(),syncBalance:()=>this.plugin.reconcileBilling(),refreshSession:async()=>{
+const {openAccountCheckoutByPrice}=await import("./billing-checkout");await openAccountCheckoutByPrice({state:this.plugin.settings,appId:"mica-webp-optimizer",installationId:this.plugin.settings.constanceDeviceId,persist:()=>this.plugin.saveSettings(),syncBalance:()=>this.plugin.reconcileBilling(true),refreshSession:async()=>{
 const diagnosticEnd33 = diagnostics?.start?.("settings-tab.background.5767") ?? (() => {});
 try {
 const a=await import("./constance-account");return await (a.refreshBillingSession(this.plugin.settings,()=>this.plugin.saveSettings()));

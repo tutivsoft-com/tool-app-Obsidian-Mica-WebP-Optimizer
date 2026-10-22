@@ -11,3 +11,5 @@ Plugin settings and workflow recovery state remain in local Obsidian plugin data
 Help is available in settings and through Open documentation. Open plugin settings and Copy diagnostic log are command-palette fallbacks. Debug logging defaults off for a new installation; failures and full Error objects/stacks still appear in the local developer console. Timed information is enabled by the debug preference. The copyable diagnostic buffer keeps at most 1,000 summarized events and excludes raw error text, stacks, note text, paths and credentials. Full console exceptions can contain whatever the failed operation placed in its error. Logs are not uploaded automatically.
 
 Obsidian and other installed plugins can access the active vault. Local processing does not isolate data from a compromised host process.
+
+Basic app usage events are sent to https://atcdn.cyou without note contents. Account and purchase operations use Constance. This is separate from the local diagnostic buffer; diagnostic logs are not automatically uploaded.
