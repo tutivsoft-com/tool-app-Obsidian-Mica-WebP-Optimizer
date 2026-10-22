@@ -1,6 +1,6 @@
 # Mica WebP Optimizer privacy
 
-Version: **3.4.57**.
+Applies to the current plugin source. Read the application version from manifest.json.
 
 Image decoding, encoding, reference discovery and file writes stay local. Constance receives billing identity, digests, image byte/pixel counts and recovery metadata rather than image bytes or note content. The local conversion log and batch journal can contain vault paths.
 

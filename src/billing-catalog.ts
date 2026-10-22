@@ -1,8 +1,7 @@
-import { watchCheckoutProgress } from "./billing-progress";
 import { diagnostics } from "./diagnostics";
 import { Setting, requestUrl } from "obsidian";
 import { refreshBillingSession } from "./constance-account";
-import { openAccountCheckout, resumeAccountCheckout, recoverAccountCheckout, cancelAccountCheckout } from "./billing-checkout";
+import { openAccountCheckout, prepareAccountCheckout, resumeAccountCheckout, recoverAccountCheckout, cancelAccountCheckout } from "./billing-checkout";
 import { CONSTANCE_API, BILLING_UNIT } from "./constance-v2";
 export const PAYMENT_VENDORS = { paddle: "Paddle", razorpay: "Razorpay", stripe: "Stripe", paypal: "PayPal", creem: "Creem", kelviq: "Kelviq" } as const;
 export type PaymentVendor = keyof typeof PAYMENT_VENDORS;
@@ -25,25 +24,8 @@ export function joinPublicPacks(products: any, appId: string): any[] {
   });
 }
 export function addLivePacks(root: HTMLElement, host: BillingCatalogHost): void {
-  const checkoutHost = { ...host, syncBalance: async () => { await host.syncBalance(); }, refreshSession: () => refreshBillingSession(host.state, host.persist) };
-  const progress = watchCheckoutProgress(root, host.state);
+  const checkoutHost = { ...host, preparationRoot: undefined as HTMLElement | undefined, syncBalance: async () => { await host.syncBalance(); }, refreshSession: () => refreshBillingSession(host.state, host.persist) };
   resumeAccountCheckout(checkoutHost);
-  let recovery: Setting | undefined;
-  const showRecovery = () => {
-    if (recovery || !host.state.pendingAccountCheckout) return;
-    recovery = new Setting(root).setName("Current purchase").setDesc("Cancels an unpaid purchase so you can buy again. Completed purchases stay safe.")
-      .addButton(button => button.setButtonText("Check payment").onClick(async () => {
-        button.setDisabled(true);
-        try { await recoverAccountCheckout(checkoutHost); }
-        finally { button.setDisabled(false); }
-      }))
-      .addButton(button => button.setButtonText("Cancel current purchase").onClick(async () => {
-        button.setDisabled(true);
-        try { await cancelAccountCheckout(checkoutHost); }
-        finally { button.setDisabled(false); }
-      }));
-  };
-  showRecovery();
   let selectedCurrency = "USD";
   let selectedVendor: PaymentVendor = "paddle";
   let renderOffers = () => {};
@@ -59,6 +41,8 @@ export function addLivePacks(root: HTMLElement, host: BillingCatalogHost): void 
   });
   const status = section.createEl("p", { text: "Loading prices..." });
   const packs = section.createDiv();
+  checkoutHost.preparationRoot = section.createDiv({cls:'checkout-payment-status'});
+  if(host.state.pendingAccountCheckout)prepareAccountCheckout(checkoutHost);
   void diagnostics.guard("billing-catalog.load", async () => {
     try {
       const response = await requestUrl({ url: `${CONSTANCE_API}/billing/offers?app_id=${encodeURIComponent(host.appId)}`, method: "GET", throw: false });
@@ -73,14 +57,15 @@ export function addLivePacks(root: HTMLElement, host: BillingCatalogHost): void 
       status.setText(matching.length ? "Applicable taxes are calculated at checkout." : unavailable.has(selectedVendor)
         ? "This vendor's prices are temporarily unavailable. Choose another vendor or refresh."
         : "No packs available for this vendor and currency.");
-      for (const { pack, priceId, units, unit, amount, available } of matching) {
-        new Setting(packs).setName(`${pack.name || "Credit offer"}${pack.provider ? ` (${PAYMENT_VENDORS[pack.provider as PaymentVendor] || pack.provider})` : ""}`).setDesc(`${pack.description || ""} ${units?.toLocaleString()} ${unit}. Tax: ${pack.tax_mode || "shown at checkout"}.`).addButton(button => button.setButtonText(available ? `Buy ${amount}` : "Pricing unavailable").setDisabled(!available).onClick(async () => {
+      for (const { pack, priceId, units, unit, amount, available } of matching.sort((a, b) => a.units - b.units)) {
+        new Setting(packs).setName(`${pack.name || "Credit offer"}${pack.provider ? ` (${PAYMENT_VENDORS[pack.provider as PaymentVendor] || pack.provider})` : ""}`).setDesc(`${pack.description ? pack.description.replace(/[.!?]$/, "") + ". " : ""}Applicable taxes are calculated at checkout.`).addButton(button => button.setButtonText(available ? `Buy ${amount}` : "Pricing unavailable").setDisabled(!available || !host.state.billingAccountLinked).onClick(async () => {
           button.setDisabled(true);
-          try { const operation = openAccountCheckout(checkoutHost, priceId); progress.refresh(); await operation; } finally { progress.refresh(); button.setDisabled(!available); showRecovery(); }
+          try { await openAccountCheckout(checkoutHost, priceId); } finally { button.setDisabled(!available || !host.state.billingAccountLinked); }
         }));
       }
       };
       renderOffers();
+      if (!host.state.billingAccountLinked) status.setText('Connect your account above to buy credits. Applicable taxes are calculated at checkout.');
     } catch (error) { diagnostics.failure("billing-catalog.load", error); status.setText("Pricing temporarily unavailable. Refresh before buying."); }
   });
 }
