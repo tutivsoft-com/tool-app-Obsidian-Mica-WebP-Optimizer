@@ -2,7 +2,7 @@
 
 ## 3.4.80
 
-Rebuilt the current settings and payment-status improvements with aligned version metadata. Validated for publication; Community review and release confirmation are pending.
+Rebuilt the current settings and payment-status improvements with aligned version metadata. The exact-source preview and separate final audit completed, and this version is confirmed as Current release.
 
 ## 3.4.78
 
