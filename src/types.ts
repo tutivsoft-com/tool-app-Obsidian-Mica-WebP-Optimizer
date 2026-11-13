@@ -52,10 +52,11 @@ export interface ConversionLogEntry {
 export interface BatchJournalEntry {
   sourcePath: string;
   outputPath?: string;
+  outputHash?: string;
   backupPath?: string;
   sourceHash: string;
   sourceBytes: number;
-  noteChanges: Array<{ path: string; originalContent: string }>;
+  noteChanges: Array<{ path: string; originalContent: string; updatedContent?: string }>;
   originalMoved: boolean;
 }
 

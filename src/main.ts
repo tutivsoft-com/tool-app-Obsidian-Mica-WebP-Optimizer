@@ -361,7 +361,7 @@ try {
     const verifiedSourceHash=await digest(sourceBytes);
     if(preserved && preserved.sourceHash!==verifiedSourceHash)throw new Error("The source image changed. Your original preview is saved. Start a new conversion, which may use additional credits.");
     const conversion = preserved?.conversion || await convertToWebp(sourceBytes, file.extension, this.settings.quality, this.settings.qualityMode, this.settings.maxDimension, this.settings.metadataPolicy);
-    const authorization=await reserveNative({app:this.app,settings:this.settings,persistNative:()=>this.saveSettings()},"mica-webp-optimizer",preserved?.eventId || jobId(),verifiedSourceHash,await digest(conversion.bytes),{bytes:sourceBytes.byteLength,pixels:conversion.info.width*conversion.info.height});
+    const authorization=await reserveNative({app:this.app,settings:this.settings,persistNative:()=>this.saveSettings(),syncBalance:()=>this.reconcileBilling()},"mica-webp-optimizer",preserved?.eventId || jobId(),verifiedSourceHash,await digest(conversion.bytes),{bytes:sourceBytes.byteLength,pixels:conversion.info.width*conversion.info.height});
     if(!authorization)return "skipped";
     const base = baseOutputPath(file.path, this.settings.outputFolder);
     const outputPath = uniqueOutputPath(base, this.app.vault.getFiles().map((item) => item.path));
@@ -389,7 +389,7 @@ diagnostics.failure("main.caught_36", error);
       await this.deleteGeneratedOutput(outputPath);
       throw error;
     }
-    const journalEntry: BatchJournalEntry = { sourcePath: file.path, outputPath, sourceHash, sourceBytes: sourceBytes.byteLength, noteChanges: [], originalMoved: false };
+    const journalEntry: BatchJournalEntry = { sourcePath: file.path, outputPath, outputHash: await digest(conversion.bytes), sourceHash, sourceBytes: sourceBytes.byteLength, noteChanges: [], originalMoved: false };
     journal.entries.push(journalEntry);
     try {
       await this.saveSettings();
@@ -399,7 +399,7 @@ diagnostics.failure("main.caught_37", error);
       await this.deleteGeneratedOutput(outputPath);
       throw error;
     }
-    let changedNotes: Array<{ path: string; originalContent: string }>;
+    let changedNotes: Array<{ path: string; originalContent: string; updatedContent?: string }>;
     try {
       changedNotes = await this.updateReferences(file.path, outputPath);
     } catch (error) {
@@ -486,7 +486,7 @@ try {
     if (index >= 0) journal.entries.splice(index, 1);
   }
 
-  private async restoreNoteChanges(changes: Array<{ path: string; originalContent: string }>): Promise<void> {
+  private async restoreNoteChanges(changes: Array<{ path: string; originalContent: string; updatedContent?: string }>): Promise<void> {
 const diagnosticEnd24 = diagnostics?.start?.("main.restoreNoteChanges") ?? (() => {});
 try {
 
@@ -509,11 +509,11 @@ try {
     return new Promise((resolve) => new LargerFileModal(this.app, source, outputBytes, resolve).open());
   }
 
-  private async updateReferences(sourcePath: string, outputPath: string): Promise<Array<{ path: string; originalContent: string }>> {
+  private async updateReferences(sourcePath: string, outputPath: string): Promise<Array<{ path: string; originalContent: string; updatedContent?: string }>> {
 const diagnosticEnd26 = diagnostics?.start?.("main.updateReferences") ?? (() => {});
 try {
 
-    const changes: Array<{ path: string; originalContent: string }> = [];
+    const changes: Array<{ path: string; originalContent: string; updatedContent?: string }> = [];
     try {
       for (const note of this.app.vault.getMarkdownFiles()) {
         await this.withNoteLock(note.path, async () => {
@@ -521,9 +521,9 @@ const diagnosticEnd27 = diagnostics?.start?.("main.background.30257") ?? (() => 
 try {
 
           const original = await this.app.vault.read(note);
-          const updated = replaceReferences(original, sourcePath, outputPath, note.path);
+          const updated = replaceReferences(original, sourcePath, outputPath, note.path, link => this.app.metadataCache.getFirstLinkpathDest(link, note.path)?.path);
           if (!updated.changed) return;
-          changes.push({ path: note.path, originalContent: original });
+          changes.push({ path: note.path, originalContent: original, updatedContent: updated.content });
           await this.app.vault.modify(note, updated.content);
 
 } catch (diagnosticError27) { diagnostics?.failure?.("main.background.30257", diagnosticError27); throw diagnosticError27; } finally { diagnosticEnd27(); }
@@ -583,34 +583,56 @@ try {
 }
 
   async rollbackLastBatch(): Promise<void> {
-const diagnosticEnd31 = diagnostics?.start?.("main.rollbackLastBatch") ?? (() => {});
-try {
-
-    if (this.processing) { new Notice(`${PLUGIN_NAME}: wait for the active optimization to finish before rolling back.`); return; }
-    const journal = this.settings.lastBatch;
-    if (!journal?.entries.length) { new Notice(`${PLUGIN_NAME}: there is no recoverable batch.`); return; }
-    let restored = 0;
-    for (const entry of journal.entries.slice().reverse()) {
-      for (const noteChange of entry.noteChanges.slice().reverse()) {
-        const note = this.app.vault.getAbstractFileByPath(noteChange.path);
-        if (note instanceof TFile) await this.app.vault.modify(note, noteChange.originalContent).catch((rejectedError7) => { diagnostics.failure("main.rejected_8", rejectedError7); return (undefined); });
+    const end = diagnostics.start("main.rollbackLastBatch");
+    try {
+      if (this.processing) { new Notice(`${PLUGIN_NAME}: wait for the active optimization to finish before rolling back.`); return; }
+      const journal = this.settings.lastBatch;
+      if (!journal?.entries.length) { new Notice(`${PLUGIN_NAME}: there is no recoverable batch.`); return; }
+      let restored = 0;
+      let keptOutputs = 0;
+      const pending: BatchJournalEntry[] = [];
+      for (const entry of journal.entries.slice().reverse()) {
+        try {
+          for (const change of entry.noteChanges.slice().reverse()) {
+            const note = this.app.vault.getAbstractFileByPath(change.path);
+            if (!(note instanceof TFile)) throw new Error("A referencing note is missing. Its recovery data was kept.");
+            const expected = change.updatedContent ?? replaceReferences(change.originalContent, entry.sourcePath, entry.outputPath || entry.sourcePath, note.path,
+              link => {
+                const resolved = this.app.metadataCache.getFirstLinkpathDest(link, note.path)?.path;
+                return resolved === entry.outputPath ? entry.sourcePath : resolved;
+              }).content;
+            await this.app.vault.process(note, current => {
+              if (current === change.originalContent) return current;
+              if (current !== expected) throw new Error("A note has newer edits. It was preserved and recovery remains available.");
+              return change.originalContent;
+            });
+          }
+          if (entry.backupPath) {
+            const backup = this.app.vault.getAbstractFileByPath(entry.backupPath);
+            if (backup instanceof TFile) {
+              if (await this.app.vault.adapter.exists(entry.sourcePath)) throw new Error("The original image path is occupied. The backup was kept.");
+              await this.app.vault.rename(backup, entry.sourcePath);
+            } else if (!(this.app.vault.getAbstractFileByPath(entry.sourcePath) instanceof TFile)) {
+              throw new Error("The original image and backup are missing. Recovery data was kept.");
+            }
+          }
+          const output = entry.outputPath ? this.app.vault.getAbstractFileByPath(entry.outputPath) : null;
+          if (output instanceof TFile) {
+            const unchanged = entry.outputHash && await digest(await this.app.vault.readBinary(output)) === entry.outputHash;
+            if (unchanged && !await this.findReferences(output.path)) await this.app.vault.delete(output);
+            else keptOutputs++;
+          }
+          restored++;
+        } catch (error) {
+          diagnostics.failure("rollback.entry", error);
+          pending.unshift(entry);
+        }
       }
-      if (entry.backupPath) {
-        const backup = this.app.vault.getAbstractFileByPath(entry.backupPath);
-        if (backup instanceof TFile && !(await this.app.vault.adapter.exists(entry.sourcePath))) await this.app.vault.rename(backup, entry.sourcePath).catch((rejectedError9) => { diagnostics.failure("main.rejected_10", rejectedError9); return (undefined); });
-      }
-      if (entry.outputPath && this.app.vault.getAbstractFileByPath(entry.outputPath) instanceof TFile) {
-        const references = await this.findReferences(entry.outputPath);
-        if (!references) await this.app.vault.delete(this.app.vault.getAbstractFileByPath(entry.outputPath) as TFile).catch((rejectedError11) => { diagnostics.failure("main.rejected_12", rejectedError11); return (undefined); });
-      }
-      restored++;
-    }
-    this.settings.lastBatch = null;
-    await this.saveSettings();
-    new Notice(`${PLUGIN_NAME}: rollback restored ${restored} conversion(s).`);
-
-} catch (diagnosticError31) { diagnostics?.failure?.("main.rollbackLastBatch", diagnosticError31); throw diagnosticError31; } finally { diagnosticEnd31(); }
-}
+      this.settings.lastBatch = pending.length ? { ...journal, entries: pending } : null;
+      await this.saveSettings();
+      new Notice(`${PLUGIN_NAME}: restored ${restored} conversion(s).${pending.length ? ` ${pending.length} kept for retry to protect changed or missing files.` : ""}${keptOutputs ? ` ${keptOutputs} generated image(s) kept because they changed, are still referenced, or have no saved checksum.` : ""}`);
+    } finally { end(); }
+  }
 
   private async findReferences(path: string): Promise<boolean> {
 const diagnosticEnd32 = diagnostics?.start?.("main.findReferences") ?? (() => {});
@@ -618,7 +640,7 @@ try {
 
     for (const note of this.app.vault.getMarkdownFiles()) {
       const content = await this.app.vault.read(note);
-      if (replaceReferences(content, path, path, note.path).changed || content.includes(path)) return true;
+      if (replaceReferences(content, path, path, note.path, link => this.app.metadataCache.getFirstLinkpathDest(link, note.path)?.path).changed || content.includes(path)) return true;
     }
     return false;
 

@@ -107,7 +107,7 @@ export function stableHash(bytes: ArrayBuffer): string {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-export function replaceReferences(content: string, sourcePath: string, outputPath: string, notePath: string): { content: string; changed: boolean } {
+export function replaceReferences(content: string, sourcePath: string, outputPath: string, notePath: string, resolveLink?: (path: string) => string | undefined): { content: string; changed: boolean } {
   const source = normalizePath(sourcePath);
   const replacement = relativePath(notePath, outputPath);
   let changed = false;
@@ -115,6 +115,7 @@ export function replaceReferences(content: string, sourcePath: string, outputPat
     const clean = raw.trim().replace(/^<|>$/g, "");
     const { path } = splitLinkSuffix(clean);
     const normalized = normalizePath(decodeLinkPath(path));
+    if (resolveLink) return resolveLink(normalized) === source;
     return normalized === source || resolveRelative(notePath, normalized) === source;
   };
   let updated = content.replace(/(!?\[\[)([^\]|#?]+)((?:[#?][^\]|]*)?)(\|[^\]]*)?(\]\])/g, (full, open: string, rawPath: string, suffix: string, alias: string, close: string) => {

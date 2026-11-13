@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.4.86
+
+Rollback preserves newer note and image edits. Automatic conversion retains collision protection, reference updates and refreshed balances.
+
 ## 3.4.80
 
 Rebuilt the current settings and payment-status improvements with aligned version metadata. The exact-source preview and separate final audit completed, and this version is confirmed as Current release.
