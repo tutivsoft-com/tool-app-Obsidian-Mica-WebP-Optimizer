@@ -24,7 +24,7 @@ Uncertain older billing records are retained and are never replayed as new v2 ch
 
 Version 3.4.86: Rollback preserves newer note and image edits. Automatic conversion retains collision protection, reference updates and refreshed balances.
 
-Use the matching GitHub release for installation availability. Community directory review is separate from source validation.
+Obsidian Community release **3.4.86** requires Obsidian **1.5.0** or later. [GitHub release](https://github.com/tutivsoft-com/tool-app-Obsidian-Mica-WebP-Optimizer/releases/tag/3.4.86).
 
 ## Support
 
