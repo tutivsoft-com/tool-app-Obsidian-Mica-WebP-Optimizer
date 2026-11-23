@@ -4,7 +4,7 @@ Convert supported PNG and JPEG images to WebP locally and update safe note refer
 
 ## Use
 
-Install or update the plugin through Obsidian Community plugins, enable it, and open its settings. Use the existing plugin commands for the selected note, text or files. Existing preferences and local recovery records are retained.
+Install or update Mica through Obsidian Community plugins, enable it, and open its settings. Use **Scan current folder and optimize** to scan the active file's folder or **Scan complete vault and optimize** to scan the vault. In the file explorer, use the Mica context menu to optimize selected images or folders. Existing preferences and local recovery records are retained.
 
 ## Account and billing
 
@@ -16,7 +16,7 @@ Mica retains its configured payment vendors and currencies. Existing historical 
 
 ## Privacy and recovery
 
-Account requests send authentication and billing information to Constance. Passwords are not saved. Session credentials and recovery state are kept in local plugin settings. Billing requests do not contain note or image contents. The main processing workflow stays local. Basic app usage events use the existing analytics service without note contents. The local diagnostic buffer is separate from automatic startup and plugin error reports sent to Datadog. Reports include the plugin version, platform, error details and recent action names. Credentials are redacted; details from a failed operation can include file paths or content.
+Account requests send authentication and billing information to Constance. Passwords are not saved. Session credentials and recovery state are kept in local plugin settings. Billing requests do not contain note or image contents. The main processing workflow stays local. Basic app usage events use the existing analytics service without note contents. Datadog receives automatic startup and plugin error reports. For details on those reports and the copyable diagnostic log, see the [privacy statement](docs/PRIVACY.md).
 
 Uncertain older billing records are retained and are never replayed as new v2 charges. Connect the original account and contact support if an earlier operation needs recovery.
 
@@ -28,4 +28,4 @@ Obsidian Community release **3.4.86** requires Obsidian **1.5.0** or later. [Git
 
 ## Support
 
-Use the plugin's Help or Open documentation command and the support links in its manifest. For a billing problem, retain the original purchase or operation identity and use the account portal. Do not share passwords or session tokens.
+Open **Help** in Mica settings or run **Open documentation** from the command palette. For a billing problem, retain the original purchase or operation ID and use the account portal. Do not share passwords or session tokens.
