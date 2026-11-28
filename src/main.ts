@@ -36,8 +36,10 @@ export default class MicaPlugin extends Plugin {
   private noCreditsNoticeShown = false;
   private autoOptimizationBlockedForCredits = false;
   private progressModal: ProgressModal | null = null;
+  private largerFileModal: LargerFileModal | null = null;
   private progress: BatchProgress = { total: 0, completed: 0, converted: 0, skipped: 0, failed: 0, current: "", paused: false, cancelled: false };
   private noteLocks = new Map<string, Promise<void>>();
+  private conversionWriteTail = Promise.resolve();
 
   async onload(): Promise<void> {
     initializeMatomo(this);
@@ -91,7 +93,7 @@ return diagnostics.guard("main.event_8", () => { if (file instanceof TFile || fi
   onunload(): void {
 return diagnostics.guard("main.onunload_10", () => {
 const diagnosticAction2 = () => {
- this.cancelRequested = true; this.progressModal?.close();
+ this.cancelRequested = true; this.largerFileModal?.close(); this.progressModal?.close();
 }; return diagnostics?.run ? diagnostics.run("main.onunload", diagnosticAction2) : diagnosticAction2();
 
 });
@@ -283,9 +285,8 @@ try {
     this.progressModal = new ProgressModal(this.app, this.progress, () => this.cancel(), () => this.togglePause());
     if (this.support.automaticWindowsEnabled()) this.progressModal.open();
     else new Notice(`${PLUGIN_NAME}: conversion started. Use the cancel command to stop it.`);
+    const previousBatch = this.settings.lastBatch;
     const journal: BatchJournal = { id: makeId(), startedAt: new Date().toISOString(), entries: [] };
-    this.settings.lastBatch = journal;
-    await this.saveSettings();
     let nextIndex = 0;
     const worker = async (): Promise<void> => {
 const diagnosticEnd17 = diagnostics?.start?.("main.worker") ?? (() => {});
@@ -315,6 +316,7 @@ diagnostics.failure("main.caught_32", error);
 };
     await Promise.all(Array.from({ length: Math.min(this.settings.concurrency, files.length) }, () => worker()));
     journal.completedAt = new Date().toISOString();
+    if (!journal.entries.length) this.settings.lastBatch = previousBatch;
     await this.saveSettings();
     const cancelled = this.cancelRequested;
     this.processing = false;
@@ -336,7 +338,7 @@ try {
   private togglePause(): void { if (!this.processing) return; this.paused = !this.paused; this.updateProgress({}); }
   private cancel(): void {
 const diagnosticAction19 = () => {
- if (!this.processing) { new Notice(`${PLUGIN_NAME}: no optimization is running.`); return; } this.cancelRequested = true; this.queue = []; this.queued.clear(); this.updateProgress({}); new Notice(`${PLUGIN_NAME}: cancellation requested; the current verified file will finish safely.`);
+ if (!this.processing) { new Notice(`${PLUGIN_NAME}: no optimization is running.`); return; } this.cancelRequested = true; this.queue = []; this.queued.clear(); this.largerFileModal?.close(); this.updateProgress({}); new Notice(`${PLUGIN_NAME}: cancellation requested; the current verified file will finish safely.`);
 }; return diagnostics?.run ? diagnostics.run("main.cancel", diagnosticAction19) : diagnosticAction19();
 }
 
@@ -361,24 +363,43 @@ try {
     const verifiedSourceHash=await digest(sourceBytes);
     if(preserved && preserved.sourceHash!==verifiedSourceHash)throw new Error("The source image changed. Your original preview is saved. Start a new conversion, which may use additional credits.");
     const conversion = preserved?.conversion || await convertToWebp(sourceBytes, file.extension, this.settings.quality, this.settings.qualityMode, this.settings.maxDimension, this.settings.metadataPolicy);
-    const authorization=await reserveNative({app:this.app,settings:this.settings,persistNative:()=>this.saveSettings(),syncBalance:()=>this.reconcileBilling()},"mica-webp-optimizer",preserved?.eventId || jobId(),verifiedSourceHash,await digest(conversion.bytes),{bytes:sourceBytes.byteLength,pixels:conversion.info.width*conversion.info.height});
-    if(!authorization)return "skipped";
+    // Encoding can run in parallel, but account confirmation allows only one pending write.
+    const write = this.conversionWriteTail.then(async () => {
+      await this.waitIfPaused();
+      if (this.cancelRequested || this.batchBillingStopped) return "skipped" as const;
+      return this.writeConversion(file, journal, sourceBytes, sourceHash, verifiedSourceHash, conversion, preserved?.eventId);
+    });
+    this.conversionWriteTail = write.then(() => {}, () => {});
+    return await write;
+
+} catch (diagnosticError21) { diagnostics?.failure?.("main.optimizeOne", diagnosticError21); throw diagnosticError21; } finally { diagnosticEnd21(); }
+}
+
+  private async writeConversion(
+    file: TFile,
+    journal: BatchJournal,
+    sourceBytes: ArrayBuffer,
+    sourceHash: string,
+    verifiedSourceHash: string,
+    conversion: Awaited<ReturnType<typeof convertToWebp>>,
+    eventId?: string
+  ): Promise<"converted" | "skipped"> {
     const base = baseOutputPath(file.path, this.settings.outputFolder);
     const outputPath = uniqueOutputPath(base, this.app.vault.getFiles().map((item) => item.path));
     const outputBytes = conversion.bytes.byteLength;
-    const outputIsLarger = outputBytes >= sourceBytes.byteLength;
+    const outputIsLarger = outputBytes > sourceBytes.byteLength;
     const candidate = { path: file.path, name: file.name, extension: file.extension, size: sourceBytes.byteLength };
-    if (outputIsLarger && this.settings.showLargerFilePrompt) {
-      const keepWebp = await this.askKeepLarger(candidate, outputBytes);
-      if (!keepWebp) {
-        // Release before returning; if the response is lost, the durable journal
-        // is reconciled by a later operation-status lookup before any new reserve.
-        await authorization.rollback();
-        this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, sourceBytes: sourceBytes.byteLength, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "larger-kept-original", reason: "Original retained because WebP was larger." });
-        return "skipped";
-      }
+    if (outputIsLarger && (!this.settings.showLargerFilePrompt || !await this.askKeepLarger(candidate, outputBytes))) {
+      this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, sourceBytes: sourceBytes.byteLength, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "larger-kept-original", reason: "Original retained because WebP was larger." });
+      return "skipped";
+    }
+    if (this.settings.originalHandling === "review" && !await this.hasSafeReference(file.path, outputPath)) {
+      this.logOriginalReview(file.path, outputPath, sourceBytes.byteLength, outputBytes);
+      return "skipped";
     }
     if(await digest(await this.app.vault.readBinary(file))!==verifiedSourceHash)throw new Error("The source image changed before saving. Your original preview is saved.");
+    const authorization=await reserveNative({app:this.app,settings:this.settings,persistNative:()=>this.saveSettings(),syncBalance:()=>this.reconcileBilling()},"mica-webp-optimizer",eventId || jobId(),verifiedSourceHash,await digest(conversion.bytes),{bytes:sourceBytes.byteLength,pixels:conversion.info.width*conversion.info.height});
+    if(!authorization)return "skipped";
     if(!await authorization.markWriting([{path:outputPath,binary:true,after:await digest(conversion.bytes)}]))return "skipped";
     await this.ensureFolder(outputPath);
     await this.app.vault.createBinary(outputPath, conversion.bytes);
@@ -391,6 +412,7 @@ diagnostics.failure("main.caught_36", error);
     }
     const journalEntry: BatchJournalEntry = { sourcePath: file.path, outputPath, outputHash: await digest(conversion.bytes), sourceHash, sourceBytes: sourceBytes.byteLength, noteChanges: [], originalMoved: false };
     journal.entries.push(journalEntry);
+    this.settings.lastBatch = journal;
     try {
       await this.saveSettings();
     } catch (error) {
@@ -412,7 +434,8 @@ diagnostics.failure("main.caught_38", error);
     if (changedNotes.length === 0 && this.settings.originalHandling === "review") {
       this.removeJournalEntry(journal, journalEntry);
       await this.deleteGeneratedOutput(outputPath);
-      this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, output: outputPath, sourceBytes: sourceBytes.byteLength, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "review", reason: "No safe reference was found; original kept." });
+      await authorization.rollback(true);
+      this.logOriginalReview(file.path, outputPath, sourceBytes.byteLength, outputBytes);
       return "skipped";
     }
     try {
@@ -450,9 +473,7 @@ diagnostics.failure("main.caught_40", error);
     }
     this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source: file.path, output: outputPath, sourceBytes: sourceBytes.byteLength, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "converted", reason: `hash:${sourceHash}:${conversion.metadataPreserved ? "metadata-kept" : "metadata-stripped"}${outputIsLarger ? ":larger-accepted" : ""}${billingResult === "pending" ? ":billing-pending" : ""}` });
     return "converted";
-
-} catch (diagnosticError21) { diagnostics?.failure?.("main.optimizeOne", diagnosticError21); throw diagnosticError21; } finally { diagnosticEnd21(); }
-}
+  }
 
   private async verifyWrittenWebp(path: string, expected: ArrayBuffer): Promise<void> {
 const diagnosticEnd22 = diagnostics?.start?.("main.verifyWrittenWebp") ?? (() => {});
@@ -506,7 +527,27 @@ try {
 }
 
   private askKeepLarger(source: { path: string; name: string; extension: string; size: number }, outputBytes: number): Promise<boolean> {
-    return new Promise((resolve) => new LargerFileModal(this.app, source, outputBytes, resolve).open());
+    return new Promise((resolve) => {
+      const modal = new LargerFileModal(this.app, source, outputBytes, (keepWebp) => {
+        this.largerFileModal = null;
+        resolve(keepWebp);
+      });
+      this.largerFileModal = modal;
+      modal.open();
+    });
+  }
+
+  private logOriginalReview(source: string, output: string, sourceBytes: number, outputBytes: number): void {
+    this.appendLog({ id: makeId(), timestamp: new Date().toISOString(), source, output, sourceBytes, outputBytes, qualityMode: this.settings.qualityMode, quality: this.settings.quality, result: "review", reason: "No safe reference was found; original kept." });
+  }
+
+  private async hasSafeReference(sourcePath: string, outputPath: string): Promise<boolean> {
+    for (const note of this.app.vault.getMarkdownFiles()) {
+      const content = await this.app.vault.read(note);
+      const result = replaceReferences(content, sourcePath, outputPath, note.path, link => this.app.metadataCache.getFirstLinkpathDest(link, note.path)?.path);
+      if (result.changed) return true;
+    }
+    return false;
   }
 
   private async updateReferences(sourcePath: string, outputPath: string): Promise<Array<{ path: string; originalContent: string; updatedContent?: string }>> {

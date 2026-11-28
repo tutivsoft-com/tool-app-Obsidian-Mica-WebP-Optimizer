@@ -10,7 +10,7 @@ export type Journal = {protocol?:string;event_id:string;app_id:string;source_dig
 type State = {billingEmail:string;billingAccessToken:string;billingRefreshToken:string;billingAccessTokenExpiresAt:number;
   billingAccountLinked:boolean;constanceDeviceId:string;operationJournal?:Journal[];pendingSpendEvents?:unknown[];pendingFreeUsageEvents?:unknown[]};
 export type NativeHost={app:App;settings:State;persistNative():Promise<void>;syncBalance?():Promise<void>};
-export interface NativeReservation {source:"free"|"purchased";markWriting(evidence?:WriteEvidence[]):Promise<boolean>;commit():Promise<{kind:"committed"|"pending"}>;rollback():Promise<void>}
+export interface NativeReservation {source:"free"|"purchased";markWriting(evidence?:WriteEvidence[]):Promise<boolean>;commit():Promise<{kind:"committed"|"pending"}>;rollback(discardedWrite?:boolean):Promise<void>}
 export async function digest(value:string|ArrayBuffer):Promise<string>{
   const bytes=typeof value==="string"?new TextEncoder().encode(value):value;
   return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("");
@@ -18,7 +18,7 @@ export async function digest(value:string|ArrayBuffer):Promise<string>{
 export function codePoints(value:string):number{return Array.from(value).length;}
 export function nativeCost(_appId:string,_dimensions:NativeDimensions):number{return 1;}
 export function jobId():string{return "v2native_"+crypto.randomUUID();}
-const pendingStates=["requesting","reserved","writing","verified","uncertain_released"];
+const pendingStates=["requesting","reserved","writing","discarding","verified","uncertain_released"];
 const owner=(host:NativeHost)=>host.settings.billingEmail.trim().toLowerCase();
 async function api(host:NativeHost,path:string,body?:unknown):Promise<any>{
   const response=await requestAuthenticatedBilling(host.settings,()=>host.persistNative(),{url:CONSTANCE_API+path,
@@ -66,8 +66,10 @@ export async function recoverNative(host:NativeHost):Promise<void>{
       const row=journal.operation_id?await api(host,"/billing/operations/"+encodeURIComponent(journal.operation_id)):await reserve(host,journal);
       validate(row,journal);
       if(row.state==="committed"||row.state==="denied")journal.state=row.state;
-      else if(row.state==="released")journal.state=journal.evidence?.length?"uncertain_released":"released";
-      else if(journal.state==="verified"||journal.state==="writing"&&await writesMatch(host,journal)){
+      else if(row.state==="released")journal.state=journal.evidence?.length&&journal.state!=="discarding"?"uncertain_released":"released";
+      else if(journal.state==="discarding"){
+        if((await settle(host,journal,"release")).state==="released")journal.state="released";
+      }else if(journal.state==="verified"||journal.state==="writing"&&await writesMatch(host,journal)){
         if((await settle(host,journal,"commit")).state==="committed")journal.state="committed";
       }else if(journal.state==="requesting")journal.state="reserved";
       await host.persistNative();
@@ -110,8 +112,15 @@ export async function reserveNative(host:NativeHost,appId:string,eventId:string,
         try{if((await settle(host,retained,"commit")).state!=="committed")return {kind:"pending"};retained.state="committed";await host.persistNative();try{await host.syncBalance?.();}catch(error){diagnostics.failure("native.balance-refresh",error);}return {kind:"committed"};}
         catch(error){diagnostics.failure("native.commit",error);return {kind:"pending"};}
       },
-      rollback:async()=>{
-        if(retained.state!=="reserved")return;
+      rollback:async(discardedWrite=false)=>{
+        if(discardedWrite&&retained.state==="writing"){
+          const evidence=retained.evidence;
+          if(evidence?.length!==1||!evidence[0].binary||await host.app.vault.adapter.exists(evidence[0].path))
+            throw new Error("The generated image must be removed before releasing its conversion.");
+          retained.state="discarding";
+          await host.persistNative();
+        }
+        if(!["reserved","discarding"].includes(retained.state))return;
         const row=await settle(host,retained,"release");retained.state=row.state;await host.persistNative();
       }};
     if(reveal&&(await reservation.commit()).kind!=="committed")throw new Error("Confirmation is pending.");

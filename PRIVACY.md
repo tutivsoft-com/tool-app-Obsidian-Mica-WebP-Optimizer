@@ -4,4 +4,4 @@ Image processing and note-reference updates happen locally. Account requests use
 
 The current full privacy statement is [docs/PRIVACY.md](docs/PRIVACY.md).
 
-Basic app usage events are sent to https://atcdn.cyou without note contents. Account and purchase operations use Constance. Datadog receives automatic startup and plugin error reports. Error details can include file paths or content.
+Matomo receives fixed app usage events. Account and purchase operations use Constance. The plugin sends startup and error diagnostics to Datadog, separately from the local support buffer. Reports can include the plugin version, platform, error details and recent action names. The reporter redacts recognized credential patterns. Error text can still include paths or content supplied by the failed operation.
