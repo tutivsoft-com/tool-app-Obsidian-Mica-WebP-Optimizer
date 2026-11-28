@@ -20,6 +20,10 @@ Account requests send authentication and billing information to Constance. Passw
 
 Uncertain older billing records are retained and are never replayed as new v2 charges. Connect the original account and contact support if an earlier operation needs recovery.
 
+## Release 3.4.89
+
+Improves image conversion, preserves Markdown code and valid image links, and detects animated PNG chunks. [Release on GitHub](https://github.com/tutivsoft-com/tool-app-Obsidian-Mica-WebP-Optimizer/releases/tag/3.4.89).
+
 ## Release
 
 Version 3.4.86: Rollback preserves newer note and image edits. Automatic conversion retains collision protection, reference updates and refreshed balances.

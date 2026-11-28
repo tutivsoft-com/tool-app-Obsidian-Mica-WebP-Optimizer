@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.89 - 28 November 2026
+
+Improves image conversion, preserves Markdown code and valid image links, and detects animated PNG chunks.
+
+
 ## 3.4.86
 
 Rollback preserves newer note and image edits. Automatic conversion retains collision protection, reference updates and refreshed balances.
